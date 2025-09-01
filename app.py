@@ -1,7 +1,8 @@
 from typing import Union
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from utils import yahoo, alpaca, supabase  # Correct import path for the yahoo class
+from utils import yahoo, alpaca
+from utils.Supabase import Supabase # Correct import path for the yahoo class
 import asyncio
 import os
 from dotenv import load_dotenv
@@ -11,8 +12,8 @@ from fastapi_cache.decorator import cache
 
 load_dotenv()
 
-URL = os.getenv("SUPABASE_URL")
-KEY = os.getenv("SUPABASE_KEY")
+URL = os.getenv("URL_SUPABASE")
+KEY = os.getenv("KEY_SUPABASE")
 
 app = FastAPI()
 
@@ -53,9 +54,9 @@ async def read_alpaca():
 @app.post("/create_user")
 async def create_user(data: dict):
     # Fix: Pass the data dictionary directly without trying to access a 'data' key
-    alpaca_instance = alpaca.Alpaca()
-    alpaca_instance.create_user(data)
+    # alpaca_instance = alpaca.Alpaca()
+    # alpaca_data=alpaca_instance.create_user(data)
     
-    supabase_object = supabase.supabase(URL, KEY)
-    await supabase_object.insert_data("users", data)
-    return {"message": "User created successfully", "data": data}
+    supabase_object = Supabase(URL, KEY)
+    supabase_data = await supabase_object.insert_data("users", data)
+    return {"message": "User created successfully", "data": data, "supabase_info": supabase_data}
