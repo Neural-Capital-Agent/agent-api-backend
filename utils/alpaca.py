@@ -26,7 +26,7 @@ class Alpaca:
         response = conn.getresponse()
         result = response.read().decode()
         conn.close()
-        return result
+        return result,response
 
     
     @staticmethod
