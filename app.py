@@ -1,62 +1,47 @@
-from typing import Union
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from utils import yahoo, alpaca
-from utils.Supabase import Supabase # Correct import path for the yahoo class
-import asyncio
-import os
-from dotenv import load_dotenv
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
-from fastapi_cache.decorator import cache
 
-load_dotenv()
+from api.api import api_router
+from core.config import settings
 
-URL = os.getenv("URL_SUPABASE")
-KEY = os.getenv("KEY_SUPABASE")
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+)
 
-app = FastAPI()
-
+# Set up CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Add routes
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 async def startup():
+    """Initialize the API cache on startup."""
     FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
 
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    """Root endpoint for health check."""
+    return {"status": "online", "service": settings.PROJECT_NAME}
 
-
-@app.get("/stocks")
-@cache(expire=300)  
-async def read_stocks():
-    return {"stocks": await asyncio.to_thread(yahoo.fetch_all_stock_data)}
-
-
-@app.get("/stocks/{symbol}")
-@cache(expire=300)
-async def read_stock(symbol: str):
-    return {"stock": await asyncio.to_thread(yahoo.fetch_stock_data, symbol)}
-
-@app.get("/alpaca")
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
 async def read_alpaca():
     return {"message": "Alpaca API endpoint"}
 
 @app.post("/create_user")
 async def create_user(data: dict):
-    # Fix: Pass the data dictionary directly without trying to access a 'data' key
-    # alpaca_instance = alpaca.Alpaca()
-    # alpaca_data=alpaca_instance.create_user(data)
-    
     supabase_object = Supabase(URL, KEY)
     supabase_data = await supabase_object.insert_data("users", data)
     return {"message": "User created successfully", "data": data, "supabase_info": supabase_data}
