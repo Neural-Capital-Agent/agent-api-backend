@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from fastapi_cache.decorator import cache
 import asyncio
-
 from api.schemas.stock import StocksResponse, StockResponse
 from core.config import settings
 from utils.yahoo import yahoo

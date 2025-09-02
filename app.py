@@ -37,11 +37,5 @@ def read_root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
-async def read_alpaca():
-    return {"message": "Alpaca API endpoint"}
 
-@app.post("/create_user")
-async def create_user(data: dict):
-    supabase_object = Supabase(URL, KEY)
-    supabase_data = await supabase_object.insert_data("users", data)
-    return {"message": "User created successfully", "data": data, "supabase_info": supabase_data}
+
