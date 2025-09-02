@@ -24,7 +24,11 @@ class Settings(BaseSettings):
     
     # Polygon settings
     POLYGON_API_KEY: str = os.getenv("POLYGON_API_KEY", "")
-    
+
+    # FRED settings
+    FRED_KEY: str = os.getenv("FRED_KEY", "")
+    FRED_URL: str = os.getenv("URL_FRED", "")
+
     # Cache settings
     CACHE_EXPIRATION_SECS: int = 300  # 5 minutes
 

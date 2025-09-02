@@ -5,32 +5,7 @@ A FastAPI-based backend service for stock data, trading, and portfolio managemen
 ## Project Structure
 
 ```
-api_neural/
-│
-├── api/                  # API specific components
-│   ├── routes/           # API route definitions
-│   │   ├── stocks.py     # Stock data endpoints
-│   │   └── alpaca.py     # Alpaca trading endpoints
-│   ├── models/           # Database models
-│   ├── schemas/          # Pydantic schemas for request/response validation
-│   │   └── stock.py      # Stock data schemas
-│   └── dependencies/     # Dependency injection components
-│       └── db.py         # Database connection dependencies
-│
-├── core/                 # Core application components
-│   └── config.py         # Application configuration using environment variables
-│
-├── utils/                # Utility modules for external services
-│   ├── alpaca.py         # Alpaca API integration for trading
-│   ├── polygon.py        # Polygon API integration for market data
-│   ├── Supabase.py       # Supabase integration for database
-│   ├── yahoo.py          # Yahoo Finance integration for stock data
-│   └── user.py           # User management utilities
-│
-├── app.py                # FastAPI application entry point
-├── requirements.txt      # Project dependencies
-└── .env                  # Environment variables (not in version control)
-```
+
 
 ## API Endpoints
 
