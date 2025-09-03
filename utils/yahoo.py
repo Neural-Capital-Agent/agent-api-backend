@@ -11,11 +11,20 @@ class yahoo:
         previous_close = stock.info.get("previousClose")
         company_name = stock.info.get("longName")
         historical_data_month = stock.history(period="1mo")
+        # Handle None values gracefully
+        if current_price is None or previous_close is None:
+            change = None
+            changeporcentual = None
+        else:
+            change = current_price - previous_close
+            changeporcentual = (change / previous_close * 100) if previous_close != 0 else 0
         return {
             "symbol": ticker_symbol,
             "current_price": current_price,
             "price": previous_close,
             "name": company_name,
+            "change": change,
+            "changePercent": changeporcentual
         }
 
     @staticmethod

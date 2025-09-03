@@ -8,7 +8,9 @@ class StockData(StockBase):
     current_price: Optional[float] = None
     price: Optional[float] = None
     name: Optional[str] = None
-    
+    change: Optional[float] = None
+    changePercent: Optional[float] = None
+
 class StocksResponse(BaseModel):
     stocks: List[StockData]
     
