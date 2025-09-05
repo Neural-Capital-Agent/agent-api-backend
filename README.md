@@ -62,6 +62,42 @@ This project uses several key libraries:
 - `uvicorn` - ASGI server
 - `yfinance` - Yahoo Finance API wrapper
 
+
+## Setting Up with uv
+
+If you have a `pyproject.toml` file, you can use [uv](https://github.com/astral-sh/uv) for fast dependency management:
+
+1. Install uv (if not already installed):
+   ```
+   pip install uv
+   ```
+   Or with pipx:
+   ```
+   pipx install uv
+   ```
+
+2. Create a virtual environment and install dependencies:
+   ```
+   uv venv
+   uv pip install -r requirements.txt  # If you have requirements.txt
+   uv pip install -e .                # For editable installs (if needed)
+   uv pip install --all-extras        # To install all optional dependencies
+   ```
+
+   Or, to install directly from `pyproject.toml`:
+   ```
+   uv pip install -r pyproject.toml
+   ```
+
+3. Activate the virtual environment:
+   ```
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+For more details, see the [uv documentation](https://github.com/astral-sh/uv)
+
+-------------------------------------------
+
 To add a new dependency:
 ```
 pip install new-package
