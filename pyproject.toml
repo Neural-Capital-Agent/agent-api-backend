@@ -1,0 +1,46 @@
+[project]
+name = "api-neural"
+version = "0.1.0"
+description = "A FastAPI-based backend service for stock data, trading, and portfolio management"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "annotated-types",
+    "anyio",
+    "beautifulsoup4",
+    "click",
+    "curl-cffi",
+    "email-validator",
+    "fastapi",
+    "fastapi-cache2",
+    "httpx",
+    "httpx-sse",
+    "jinja2",
+    "jsonschema",
+    "mcp[cli]",
+    "numpy",
+    "packaging",
+    "pandas",
+    "peewee",
+    "pendulum",
+    "polygon",
+    "postgrest",
+    "pydantic",
+    "pydantic-settings",
+    "pyjwt",
+    "python-dateutil",
+    "python-dotenv",
+    "python-multipart",
+    "pyyaml",
+    "requests",
+    "rich",
+    "sentry-sdk",
+    "sse-starlette",
+    "starlette",
+    "storage3",
+    "supabase",
+    "typer",
+    "uvicorn",
+    "yfinance",
+]
+d
