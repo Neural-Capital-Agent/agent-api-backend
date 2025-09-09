@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+<<<<<<< HEAD
 from utils.alpaca import alpaca
 from api.services import user_service
 from api.schemas.user import UserEmail
@@ -29,3 +30,17 @@ async def get_alpaca_account(email: str):
         return {"mensaje": "Alpaca account not found"}
     alpaca_data=alpaca.get_account(alpaca_account)
     return {"data": "Alpaca account retrieved successfully", "alpaca_account": alpaca_dat}
+=======
+from utils.alpaca import Alpaca
+
+router = APIRouter(tags=["alpaca"])
+
+@router.get("/")
+async def get_alpaca_data():
+    """
+    Retrieve account data from Alpaca.
+    """
+    return {"data": Alpaca.requestAlpaca("GET", "/v2/account")}
+
+# Add more alpaca-related endpoints as needed
+>>>>>>> 4318aabd8f49beaada6d00c27cd8e4790426dc72
