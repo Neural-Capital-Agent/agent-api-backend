@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-
->>>>>>> 4318aabd8f49beaada6d00c27cd8e4790426dc72
 # Neural API
 
 A FastAPI-based backend service for stock data, trading, and portfolio management.
@@ -183,16 +179,6 @@ pip install new-package
 pip freeze > requirements.txt
 ```
 
-<<<<<<< HEAD
-## API Documentation
-
-Once the application is running, you can access:
-- Interactive API documentation: http://localhost:8000/docs
-- Alternative API documentation: http://localhost:8000/redoc
-- OpenAPI Schema: http://localhost:8000/api/v1/openapi.json
-
-## Project Structure Benefits
-=======
 ---
 
 ## 📚 API Documentation
@@ -206,7 +192,6 @@ Once the application is running, you can access:
 ---
 
 ## 🏗 Project Structure Benefits
->>>>>>> 4318aabd8f49beaada6d00c27cd8e4790426dc72
 
 This project follows a modular architecture with several advantages:
 
@@ -224,11 +209,7 @@ This project follows a modular architecture with several advantages:
    - Easily add new external service integrations
    - Add more complex database models as needed
 
-<<<<<<< HEAD
-4. **Configuration Management**: Centralized settings in `core/config.py`
-=======
 4. **Configuration Management**
    - Centralized settings in `core/config.py`
->>>>>>> 4318aabd8f49beaada6d00c27cd8e4790426dc72
    - Environment variables loaded from `.env` file
    - Settings validated with Pydantic
