@@ -13,6 +13,10 @@ def add_user(user: UserCreate):
     response = supabase.table("users").insert(user_dict).execute()
     return f'{user} dfs {response.data[0]}' if response.data else None
 
+def add_alpaca_id(email: str, alpaca_id: str):
+    response = supabase.table("users").update({"alpaca_id": alpaca_id}).eq("email", email).execute()
+    return response.data[0] if response.data else None
+
 def login_user(user: UserLogin):
     user_response = supabase.auth.sign_in_with_password({"email": user.email, "password": user.password})
     if user_response.user:
