@@ -10,6 +10,7 @@ dependencies = [
     "beautifulsoup4",
     "click",
     "curl-cffi",
+    "datetime>=5.5",
     "email-validator",
     "fastapi",
     "fastapi-cache2",
@@ -43,4 +44,3 @@ dependencies = [
     "uvicorn",
     "yfinance",
 ]
-d
