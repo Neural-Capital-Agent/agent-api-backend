@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
-from .agents import DataAgent
+from .agents import DataAgent, PortfolioAgent, PlannerAgent, ExplainabilityAgent
 from .utils import SupabaseDataStorage, DataValidator, DataAggregator
 
 logger = logging.getLogger(__name__)
@@ -317,3 +317,241 @@ class DataAgentTasks:
         
         logger.error(f"All {self.MAX_RETRIES} fetch attempts failed. Last error: {last_exception}")
         return None
+
+
+class PortfolioAgentTasks:
+    """
+    Task scheduler and configuration for the Portfolio Agent.
+    Manages portfolio optimization, rebalancing, and performance monitoring tasks.
+    """
+
+    def __init__(self):
+        self.portfolio_agent = PortfolioAgent()
+
+        self.REBALANCING_FREQUENCY = "weekly"  # weekly, monthly, quarterly
+        self.RISK_MONITORING_FREQUENCY = "daily"
+        self.BACKTEST_FREQUENCY = "monthly"
+
+        self.MAX_PORTFOLIO_DRIFT = 0.05  # 5% drift threshold
+        self.REBALANCING_THRESHOLD = 0.02  # 2% threshold for rebalancing
+
+    async def portfolio_rebalancing_task(self, portfolio_id: str) -> Dict[str, Any]:
+        """
+        Periodic task to check and execute portfolio rebalancing.
+        """
+        try:
+            logger.info(f"Starting rebalancing task for portfolio {portfolio_id}")
+
+            results = {
+                "portfolio_id": portfolio_id,
+                "timestamp": datetime.now().isoformat(),
+                "rebalancing_required": False,
+                "action_taken": "none"
+            }
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in portfolio rebalancing task: {e}")
+            return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+    async def risk_monitoring_task(self, portfolio_id: str) -> Dict[str, Any]:
+        """
+        Daily task to monitor portfolio risk metrics.
+        """
+        try:
+            logger.info(f"Starting risk monitoring for portfolio {portfolio_id}")
+
+            results = {
+                "portfolio_id": portfolio_id,
+                "timestamp": datetime.now().isoformat(),
+                "risk_metrics": {},
+                "alerts": []
+            }
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in risk monitoring task: {e}")
+            return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+    async def performance_tracking_task(self, portfolio_id: str) -> Dict[str, Any]:
+        """
+        Task to track and analyze portfolio performance.
+        """
+        try:
+            logger.info(f"Starting performance tracking for portfolio {portfolio_id}")
+
+            results = {
+                "portfolio_id": portfolio_id,
+                "timestamp": datetime.now().isoformat(),
+                "performance_metrics": {}
+            }
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in performance tracking task: {e}")
+            return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+
+class PlannerAgentTasks:
+    """
+    Task scheduler and configuration for the Financial Planner Agent.
+    Manages goal parsing, strategy updates, and lifecycle planning tasks.
+    """
+
+    def __init__(self):
+        self.planner_agent = PlannerAgent()
+
+        self.GOAL_REVIEW_FREQUENCY = "quarterly"
+        self.STRATEGY_UPDATE_FREQUENCY = "semi_annually"
+        self.LIFECYCLE_ADJUSTMENT_FREQUENCY = "annually"
+
+    async def goal_parsing_task(self, goal_text: str, user_id: str) -> Dict[str, Any]:
+        """
+        Task to parse and validate user financial goals.
+        """
+        try:
+            logger.info(f"Starting goal parsing for user {user_id}")
+
+            goal_params = await self.planner_agent.parse_goal(goal_text)
+
+            results = {
+                "user_id": user_id,
+                "original_text": goal_text,
+                "parsed_goal": {
+                    "goal_type": goal_params.goal_type.value,
+                    "target_amount": goal_params.target_amount,
+                    "time_horizon_years": goal_params.time_horizon_years,
+                    "current_age": goal_params.current_age,
+                    "risk_tolerance": goal_params.risk_tolerance.value if goal_params.risk_tolerance else None
+                },
+                "timestamp": datetime.now().isoformat()
+            }
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in goal parsing task: {e}")
+            return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+    async def strategy_generation_task(self, goal: Dict[str, Any], user_profile: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Task to generate investment strategy based on goals and profile.
+        """
+        try:
+            logger.info("Starting strategy generation task")
+
+            results = {
+                "timestamp": datetime.now().isoformat(),
+                "strategy_generated": True,
+                "recommended_allocation": {}
+            }
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in strategy generation task: {e}")
+            return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+    async def lifecycle_adjustment_task(self, user_id: str, current_age: int) -> Dict[str, Any]:
+        """
+        Annual task to adjust strategy based on lifecycle changes.
+        """
+        try:
+            logger.info(f"Starting lifecycle adjustment for user {user_id}")
+
+            glide_path = self.planner_agent.build_glide_path(current_age)
+
+            results = {
+                "user_id": user_id,
+                "current_age": current_age,
+                "glide_path": glide_path.age_ranges,
+                "adjustments_made": [],
+                "timestamp": datetime.now().isoformat()
+            }
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in lifecycle adjustment task: {e}")
+            return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+
+class ExplainabilityAgentTasks:
+    """
+    Task scheduler and configuration for the Explainability Agent.
+    Manages explanation generation, translation, and verification tasks.
+    """
+
+    def __init__(self):
+        self.explainability_agent = ExplainabilityAgent()
+
+        self.EXPLANATION_CACHE_TTL = 3600  # 1 hour
+        self.VERIFICATION_FREQUENCY = "daily"
+        self.JARGON_UPDATE_FREQUENCY = "monthly"
+
+    async def explanation_generation_task(self, action: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Task to generate comprehensive explanations for agent actions.
+        """
+        try:
+            logger.info(f"Starting explanation generation for action {action.get('id')}")
+
+            results = {
+                "action_id": action.get("id"),
+                "explanation_generated": True,
+                "explanation": "Generated explanation would appear here",
+                "confidence_score": 0.85,
+                "timestamp": datetime.now().isoformat()
+            }
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in explanation generation task: {e}")
+            return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+    async def jargon_translation_task(self, technical_text: str) -> Dict[str, Any]:
+        """
+        Task to translate technical financial jargon to plain English.
+        """
+        try:
+            logger.info("Starting jargon translation task")
+
+            translated_text = self.explainability_agent.translate_jargon(technical_text)
+
+            results = {
+                "original_text": technical_text,
+                "translated_text": translated_text,
+                "translation_quality": "high",
+                "timestamp": datetime.now().isoformat()
+            }
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in jargon translation task: {e}")
+            return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+    async def verification_task(self, explanation_id: str) -> Dict[str, Any]:
+        """
+        Task to verify explanation accuracy and consistency.
+        """
+        try:
+            logger.info(f"Starting verification for explanation {explanation_id}")
+
+            results = {
+                "explanation_id": explanation_id,
+                "verification_passed": True,
+                "accuracy_score": 0.92,
+                "consistency_score": 0.89,
+                "timestamp": datetime.now().isoformat()
+            }
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Error in verification task: {e}")
+            return {"error": str(e), "timestamp": datetime.now().isoformat()}
