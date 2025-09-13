@@ -3,6 +3,9 @@
 
 # "public" schema for Neural Capital AI
 
+`This is not final yet, still in brainstorming phase`
+
+
 ---------------------
 
 
