@@ -14,10 +14,7 @@ Coral Protocol Integration:
 - Blockchain verification for decision transparency
 """
 
-from .agents import DataAgent
-from .portfolio_agent import PortfolioAgent
-from .planner_agent import PlannerAgent
-from .explainability_agent import ExplainabilityAgent
+from .agents import DataAgent, PortfolioAgent, PlannerAgent, ExplainabilityAgent
 from .coral_client import CoralClient
 from .models import (
     # Core models
