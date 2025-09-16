@@ -26,8 +26,11 @@ class SupabaseDataStorage:
             try:
                 self.client: Client = create_client(self.supabase_url, self.supabase_key)
                 logger.info("Supabase client initialized successfully")
-            except Exception as e:
+            except (ValueError, ConnectionError, ImportError) as e:
                 logger.error(f"Failed to initialize Supabase client: {e}")
+                self.client = None
+            except Exception as e:
+                logger.error(f"Unexpected error initializing Supabase client: {e}")
                 self.client = None
     
     def is_available(self) -> bool:
@@ -70,8 +73,11 @@ class SupabaseDataStorage:
                 logger.error(f"Failed to store market data for {market_data.get('symbol')}")
                 return False
                 
-        except Exception as e:
+        except (ValueError, TypeError, ConnectionError, KeyError) as e:
             logger.error(f"Error storing market data: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error storing market data: {e}")
             return False
     
     async def store_macro_data(self, macro_data: Dict[str, Any]) -> bool:
@@ -106,8 +112,11 @@ class SupabaseDataStorage:
                 logger.error(f"Failed to store macro data for {macro_data.get('indicator')}")
                 return False
                 
-        except Exception as e:
+        except (ValueError, TypeError, ConnectionError, KeyError) as e:
             logger.error(f"Error storing macro data: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error storing macro data: {e}")
             return False
     
     async def get_historical_market_data(self, symbol: str, days: int = 30) -> List[Dict[str, Any]]:

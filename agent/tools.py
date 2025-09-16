@@ -2,7 +2,10 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from .agents import DataAgent, PortfolioAgent, PlannerAgent, ExplainabilityAgent
+from .data_agent import DataAgent
+from .portfolio_agent import PortfolioAgent
+from .planner_agent import PlannerAgent
+from .explainability_agent import ExplainabilityAgent
 from .models import MarketData, MacroData, RiskLevel, GoalType
 
 logger = logging.getLogger(__name__)
