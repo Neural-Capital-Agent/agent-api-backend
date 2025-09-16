@@ -1,12 +1,22 @@
 import asyncio
-import aiohttp
+import httpx
 import json
 import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import hashlib
 
-from .models import CoralMessage, CoralResponse, AgentRegistration
+try:
+    from .models import CoralMessage, CoralResponse, AgentRegistration
+    from .mistral_client import mistral_client
+except ImportError:
+    # For testing when running directly
+    from models import CoralMessage, CoralResponse, AgentRegistration
+    try:
+        from mistral_client import mistral_client
+    except ImportError:
+        logger.warning("Mistral client not available")
+        mistral_client = None
 
 logger = logging.getLogger(__name__)
 
@@ -19,21 +29,21 @@ class CoralClient:
     def __init__(self, coral_server_url: str = "http://localhost:5555", agent_id: str = None):
         self.coral_server_url = coral_server_url
         self.agent_id = agent_id
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.client: Optional[httpx.AsyncClient] = None
         self.registered_agents: Dict[str, AgentRegistration] = {}
 
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
+        self.client = httpx.AsyncClient()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.session:
-            await self.session.close()
+        if self.client:
+            await self.client.aclose()
 
-    async def _ensure_session(self):
-        """Ensure aiohttp session is available"""
-        if self.session is None:
-            self.session = aiohttp.ClientSession()
+    async def _ensure_client(self):
+        """Ensure httpx client is available"""
+        if self.client is None:
+            self.client = httpx.AsyncClient()
 
     async def register_agent(self, agent_type: str, capabilities: List[str], endpoint: str) -> bool:
         """
@@ -48,7 +58,7 @@ class CoralClient:
             True if registration successful
         """
         try:
-            await self._ensure_session()
+            await self._ensure_client()
 
             registration_data = {
                 "agent_id": self.agent_id,
@@ -57,21 +67,28 @@ class CoralClient:
                 "endpoint": endpoint
             }
 
-            # For now, simulate registration (actual Coral Protocol integration would go here)
-            logger.info(f"Registering agent {self.agent_id} with Coral Protocol")
+            # Real Coral Protocol registration would go here
+            # For now, just log the registration attempt
+            logger.info(f"Attempting to register agent {self.agent_id} with Coral Protocol")
             logger.info(f"Agent type: {agent_type}, Capabilities: {capabilities}")
 
-            self.registered_agents[self.agent_id] = AgentRegistration(
-                agent_id=self.agent_id,
-                agent_type=agent_type,
-                capabilities=capabilities,
-                endpoint=endpoint
-            )
+            # Only register if we have a valid agent_id
+            if self.agent_id:
+                self.registered_agents[self.agent_id] = AgentRegistration(
+                    agent_id=self.agent_id,
+                    agent_type=agent_type,
+                    capabilities=capabilities,
+                    endpoint=endpoint
+                )
+                return True
 
-            return True
+            return False
 
-        except Exception as e:
+        except (ValueError, TypeError, ConnectionError) as e:
             logger.error(f"Failed to register agent: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error during agent registration: {e}")
             return False
 
     async def discover_agents(self, agent_type: Optional[str] = None) -> List[AgentRegistration]:
@@ -85,37 +102,22 @@ class CoralClient:
             List of available agents
         """
         try:
-            await self._ensure_session()
+            await self._ensure_client()
 
-            # For now, return mock agents (actual Coral Protocol discovery would go here)
-            mock_agents = [
-                AgentRegistration(
-                    agent_id="data_agent_1",
-                    agent_type="data_agent",
-                    capabilities=["fetch_market_data", "fetch_macro_data", "validate_signals"],
-                    endpoint="http://localhost:8000/data"
-                ),
-                AgentRegistration(
-                    agent_id="portfolio_agent_1",
-                    agent_type="portfolio_agent",
-                    capabilities=["build_portfolio", "calculate_rebalancing", "backtest_strategy"],
-                    endpoint="http://localhost:8001/portfolio"
-                ),
-                AgentRegistration(
-                    agent_id="planner_agent_1",
-                    agent_type="planner_agent",
-                    capabilities=["parse_goal", "generate_strategy", "build_glide_path"],
-                    endpoint="http://localhost:8002/planner"
-                )
-            ]
+            # Real Coral Protocol discovery would go here
+            # For now, return only registered agents
+            registered_agents = list(self.registered_agents.values())
 
             if agent_type:
-                return [agent for agent in mock_agents if agent.agent_type == agent_type]
+                return [agent for agent in registered_agents if agent.agent_type == agent_type]
 
-            return mock_agents
+            return registered_agents
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, ValueError) as e:
             logger.error(f"Failed to discover agents: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error during agent discovery: {e}")
             return []
 
     async def invoke_agent(self, target_agent: str, method: str, parameters: Dict[str, Any]) -> Any:
@@ -131,7 +133,7 @@ class CoralClient:
             Response from target agent
         """
         try:
-            await self._ensure_session()
+            await self._ensure_client()
 
             message = CoralMessage(
                 agent_id=self.agent_id,
@@ -143,43 +145,97 @@ class CoralClient:
 
             logger.info(f"Invoking {method} on {target_agent} with params: {parameters}")
 
-            # For now, simulate the call (actual Coral Protocol invocation would go here)
+            # Real Coral Protocol invocation would go here
             # In a real implementation, this would:
             # 1. Send the message through Coral Protocol
             # 2. Handle CORAL token payments
             # 3. Wait for response
             # 4. Verify response integrity
 
-            if target_agent == "data_agent" and method == "fetch_market_data":
-                # Simulate data agent response
-                return {
-                    "symbol": parameters.get("ticker", "SPY"),
-                    "price": 450.50,
-                    "change": 2.30,
-                    "change_percent": 0.51,
-                    "timestamp": datetime.now().isoformat()
-                }
-            elif target_agent == "data_agent" and method == "validate_signals":
-                return {"is_valid": True, "confidence": 0.85}
-            elif target_agent == "portfolio_agent" and method == "get_decision_rationale":
-                return {
-                    "reason": "Rebalancing due to volatility spike",
-                    "confidence": 0.78,
-                    "supporting_data": {"vix": 28.5}
-                }
-            elif target_agent == "llm_agent" and method == "parse_goal":
-                return {
-                    "goal_type": "retirement",
-                    "target_amount": 1000000,
-                    "time_horizon": 30,
-                    "confidence": 0.92
-                }
+            # Handle LLM agent requests
+            if target_agent == "llm_agent" and method == "parse_goal":
+                # Use Mistral LLM for goal parsing
+                if mistral_client:
+                    try:
+                        goal_text = parameters.get("text", "")
+                        result = await mistral_client.parse_financial_goal(goal_text)
+                        return result
+                    except Exception as e:
+                        logger.error(f"Mistral LLM error for goal parsing: {e}")
+                        # Fallback to mock response
+                        return {
+                            "goal_type": "retirement",
+                            "target_amount": 1000000,
+                            "time_horizon": 30,
+                            "confidence": 0.5,
+                            "error": str(e)
+                        }
+                else:
+                    raise Exception("Mistral LLM client not available")
 
-            # Default mock response
-            return {"status": "success", "data": parameters}
+            elif target_agent == "llm_agent" and method == "explain_decision":
+                # Use Mistral LLM for decision explanations
+                if mistral_client:
+                    try:
+                        action = parameters.get("action", {})
+                        context = parameters.get("context", {})
+                        explanation = await mistral_client.explain_financial_decision(action, context)
+                        return {"explanation": explanation}
+                    except Exception as e:
+                        logger.error(f"Mistral LLM error for decision explanation: {e}")
+                        return {"explanation": f"Investment decision made due to {action.get('reason', 'current market conditions')}. This adjustment helps maintain your portfolio's target risk level and expected returns.", "error": str(e)}
+                else:
+                    raise Exception("Mistral LLM client not available")
 
-        except Exception as e:
+            elif target_agent == "llm_agent" and method == "translate_jargon":
+                # Use Mistral LLM for jargon translation
+                if mistral_client:
+                    try:
+                        technical_text = parameters.get("text", "")
+                        translation = await mistral_client.translate_financial_jargon(technical_text)
+                        return {"translation": translation}
+                    except Exception as e:
+                        logger.error(f"Mistral LLM error for jargon translation: {e}")
+                        return {"translation": parameters.get("text", ""), "error": str(e)}
+                else:
+                    raise Exception("Mistral LLM client not available")
+
+            elif target_agent == "llm_agent" and method == "create_plan":
+                # Use Mistral LLM for investment plan creation
+                if mistral_client:
+                    try:
+                        goal = parameters.get("goal", {})
+                        strategy = parameters.get("strategy", {})
+                        plan = await mistral_client.create_investment_plan(goal, strategy)
+                        return {"plan": plan}
+                    except Exception as e:
+                        logger.error(f"Mistral LLM error for plan creation: {e}")
+                        return {"plan": {"monthly_contribution": 1000, "error": str(e)}}
+                else:
+                    raise Exception("Mistral LLM client not available")
+
+            elif target_agent == "llm_agent" and method == "validate_signals":
+                # Use Mistral LLM for market signal validation
+                if mistral_client:
+                    try:
+                        signals = parameters.get("signals", {})
+                        market_data = parameters.get("market_data", {})
+                        validation = await mistral_client.validate_market_signals(signals, market_data)
+                        return validation
+                    except Exception as e:
+                        logger.error(f"Mistral LLM error for signal validation: {e}")
+                        return {"is_valid": True, "confidence": 0.5, "reasoning": "Default validation due to processing error", "error": str(e)}
+                else:
+                    raise Exception("Mistral LLM client not available")
+
+            # No mock responses - real implementation required
+            raise Exception(f"Agent {target_agent} with method {method} not implemented or unavailable")
+
+        except (ConnectionError, TimeoutError, ValueError, KeyError) as e:
             logger.error(f"Failed to invoke {method} on {target_agent}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error invoking {method} on {target_agent}: {e}")
             raise
 
     async def query_agents(self, agent_ids: List[str], query: str = "status") -> Dict[str, Any]:
@@ -285,11 +341,91 @@ class CoralClient:
             logger.error(f"CORAL token payment failed: {e}")
             return False
 
+    async def health_check(self) -> Dict[str, Any]:
+        """
+        Check if the coral client is properly configured and operational.
+
+        Returns:
+            Health status information including configuration and connectivity
+        """
+        try:
+            health_status = {
+                "status": "healthy",
+                "checks": {},
+                "timestamp": datetime.now().isoformat(),
+                "client_info": {
+                    "agent_id": self.agent_id,
+                    "coral_server_url": self.coral_server_url,
+                    "client_active": self.client is not None
+                }
+            }
+
+            # Check 1: Basic configuration
+            health_status["checks"]["configuration"] = {
+                "passed": bool(self.coral_server_url and self.agent_id),
+                "message": "Configuration valid" if (self.coral_server_url and self.agent_id)
+                          else "Missing coral_server_url or agent_id"
+            }
+
+            # Check 2: Client connectivity
+            await self._ensure_client()
+            health_status["checks"]["client"] = {
+                "passed": self.client is not None,
+                "message": "HTTP client available" if self.client else "No HTTP client available"
+            }
+
+            # Check 3: Server connectivity (if possible)
+            try:
+                response = await self.client.get(
+                    f"{self.coral_server_url}/health",
+                    timeout=5.0
+                )
+                server_healthy = response.status_code == 200
+                health_status["checks"]["server_connectivity"] = {
+                    "passed": server_healthy,
+                    "message": f"Server responded with status {response.status_code}" if server_healthy
+                             else f"Server unhealthy (status: {response.status_code})"
+                }
+            except Exception as e:
+                health_status["checks"]["server_connectivity"] = {
+                    "passed": False,
+                    "message": f"Cannot reach coral server: {str(e)}"
+                }
+
+            # Check 4: Registration status
+            health_status["checks"]["registration"] = {
+                "passed": self.agent_id in self.registered_agents,
+                "message": "Agent registered" if self.agent_id in self.registered_agents
+                          else "Agent not registered with coral protocol",
+                "registered_agents_count": len(self.registered_agents)
+            }
+
+            # Overall status determination
+            failed_checks = [check for check in health_status["checks"].values() if not check["passed"]]
+            if failed_checks:
+                health_status["status"] = "degraded" if len(failed_checks) <= 2 else "unhealthy"
+                health_status["issues_count"] = len(failed_checks)
+
+            return health_status
+
+        except Exception as e:
+            logger.error(f"Health check failed: {e}")
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+                "client_info": {
+                    "agent_id": self.agent_id,
+                    "coral_server_url": self.coral_server_url,
+                    "client_active": self.client is not None if hasattr(self, 'client') else False
+                }
+            }
+
     async def close(self):
-        """Close the client session"""
-        if self.session:
-            await self.session.close()
-            self.session = None
+        """Close the HTTP client"""
+        if self.client:
+            await self.client.aclose()
+            self.client = None
 
     # Agent-specific helper methods
     async def get_market_context_from_data_agent(self, timestamp: Optional[str] = None) -> Dict[str, Any]:
@@ -511,3 +647,62 @@ class CoralClient:
         except Exception as e:
             logger.error(f"Network health check failed: {e}")
             return {"error": str(e), "network_health_score": 0.0}
+
+
+async def main():
+    """Test function to demonstrate coral client health check functionality"""
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    print("Testing Coral Client Health Check")
+    print("=" * 40)
+
+    # Test 1: Client with missing configuration
+    print("\n1. Testing with missing configuration...")
+    client1 = CoralClient()
+    health_result = await client1.health_check()
+    print(f"Status: {health_result['status']}")
+    print(f"Issues: {health_result.get('issues_count', 0)}")
+    for check_name, check_result in health_result.get('checks', {}).items():
+        status = "PASS" if check_result['passed'] else "FAIL"
+        print(f"  {status} {check_name}: {check_result['message']}")
+    await client1.close()
+
+    # Test 2: Client with proper configuration
+    print("\n2. Testing with proper configuration...")
+    client2 = CoralClient(
+        coral_server_url="http://localhost:5555",
+        agent_id="test_agent_123"
+    )
+
+    # Register the agent to test registration status
+    await client2.register_agent(
+        agent_type="test_agent",
+        capabilities=["health_testing"],
+        endpoint="http://localhost:8080/test"
+    )
+
+    health_result = await client2.health_check()
+    print(f"Status: {health_result['status']}")
+    print(f"Issues: {health_result.get('issues_count', 0)}")
+    for check_name, check_result in health_result.get('checks', {}).items():
+        status = "PASS" if check_result['passed'] else "FAIL"
+        print(f"  {status} {check_name}: {check_result['message']}")
+
+    print(f"\nClient Info:")
+    client_info = health_result['client_info']
+    print(f"  Agent ID: {client_info['agent_id']}")
+    print(f"  Server URL: {client_info['coral_server_url']}")
+    print(f"  Client Active: {client_info['client_active']}")
+
+    await client2.close()
+
+    print("\n" + "=" * 40)
+    print("Health check testing completed!")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
