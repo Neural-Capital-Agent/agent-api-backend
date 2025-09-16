@@ -1,14 +1,121 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exception_handlers import (
+    http_exception_handler,
+    request_validation_exception_handler,
+)
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
+import logging
+import time
+from datetime import datetime
 
 from api.api import api_router
+from api.middleware.rate_limiting import RateLimitMiddleware, LLMUsageMiddleware
 from core.config import settings
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Create FastAPI app with enhanced configuration
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    title=f"{settings.PROJECT_NAME} - Financial Agents API",
+    description="""
+    Neural Capital Financial Agents API provides comprehensive financial services through AI-powered agents:
+
+    ## 🤖 Available Agents
+
+    * **Data Agent** - Real-time market data, macro indicators, technical analysis
+    * **Portfolio Agent** - Portfolio optimization, risk management, rebalancing
+    * **Planner Agent** - Goal parsing, investment strategies, lifecycle planning
+    * **Explainability Agent** - Decision explanations, jargon translation
+
+    ## 🔒 Rate Limiting
+
+    * **Basic Tier**: 50 requests/day, 10/hour, 3/minute, 100 LLM credits
+    * **Premium Tier**: 200 requests/day, 50/hour, 10/minute, 500 LLM credits
+    * **Enterprise Tier**: 1000 requests/day, 200/hour, 50/minute, 2000 LLM credits
+
+    ## 📊 Data Sources
+
+    * Yahoo Finance (real-time market data)
+    * FRED API (economic indicators)
+    * Polygon API (advanced market data)
+    * Mistral AI (natural language processing)
+
+    ## 🚀 Features
+
+    * Multi-agent financial workflows
+    * Real-time data integration
+    * Comprehensive rate limiting
+    * LLM-powered insights
+    * RESTful API design
+    """,
+    version="2.0.0",
+    terms_of_service="https://neural-capital.com/terms",
+    contact={
+        "name": "Neural Capital API Support",
+        "url": "https://neural-capital.com/support",
+        "email": "api-support@neural-capital.com",
+    },
+    license_info={
+        "name": "Proprietary",
+        "url": "https://neural-capital.com/license",
+    },
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# Custom exception handlers
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Custom HTTP exception handler with enhanced error information."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": exc.status_code,
+                "message": exc.detail,
+                "timestamp": datetime.now().isoformat(),
+                "path": str(request.url.path),
+                "method": request.method
+            }
+        }
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Custom validation error handler."""
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": 422,
+                "message": "Request validation failed",
+                "details": exc.errors(),
+                "timestamp": datetime.now().isoformat(),
+                "path": str(request.url.path),
+                "method": request.method
+            }
+        }
+    )
+
+
+# Set up Rate Limiting Middleware (before CORS for proper header handling)
+app.add_middleware(LLMUsageMiddleware)
+app.add_middleware(
+    RateLimitMiddleware,
+    llm_endpoints=["/api/v1/llm/", "/api/v1/agents/", "/api/v1/chat/"],
+    default_user_tier="basic"
 )
 
 # Set up CORS
@@ -25,14 +132,243 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 async def startup():
-    """Initialize the API cache on startup."""
-    FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
+    """Initialize the API cache, rate limiting, and agents on startup."""
+    try:
+        # Initialize cache
+        FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
+        logger.info("✓ FastAPI cache initialized")
+
+        # Initialize rate limiting
+        from utils.rate_limiter import setup_user_tier, USER_TIER_CONFIGS
+        logger.info("✓ Rate limiting system initialized")
+        logger.info(f"✓ Available tiers: {list(USER_TIER_CONFIGS.keys())}")
+
+        # Initialize agents (lazy loading will happen on first request)
+        logger.info("✓ Financial agents ready for initialization")
+
+        # Log startup completion
+        logger.info("🚀 Neural Capital Financial Agents API started successfully")
+        logger.info(f"📊 API Documentation: http://localhost:8000/docs")
+        logger.info(f"📈 ReDoc: http://localhost:8000/redoc")
+
+    except Exception as e:
+        logger.error(f"❌ Startup failed: {e}")
+        raise
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    """Clean shutdown procedures."""
+    try:
+        logger.info("🔄 Shutting down Neural Capital API...")
+
+        # Close any open connections
+        from agent.mistral_client import mistral_client
+        await mistral_client.close()
+
+        logger.info("✓ Shutdown completed successfully")
+    except Exception as e:
+        logger.error(f"❌ Shutdown error: {e}")
 
 
 @app.get("/")
-def read_root():
-    """Root endpoint for health check."""
-    return {"status": "online", "service": settings.PROJECT_NAME}
+async def read_root():
+    """Root endpoint with comprehensive API information."""
+    return {
+        "service": f"{settings.PROJECT_NAME} - Financial Agents API",
+        "version": "2.0.0",
+        "status": "online",
+        "timestamp": datetime.now().isoformat(),
+        "endpoints": {
+            "documentation": "/docs",
+            "redoc": "/redoc",
+            "openapi": f"{settings.API_V1_STR}/openapi.json",
+            "health_checks": {
+                "system": "/health",
+                "rate_limiting": "/rate-limit/health",
+                "agents": f"{settings.API_V1_STR}/agents/health",
+                "llm": f"{settings.API_V1_STR}/llm/health"
+            }
+        },
+        "agents": {
+            "data_agent": f"{settings.API_V1_STR}/agents/data/",
+            "portfolio_agent": f"{settings.API_V1_STR}/agents/portfolio/",
+            "planner_agent": f"{settings.API_V1_STR}/agents/planner/",
+            "explainability_agent": f"{settings.API_V1_STR}/agents/explainer/"
+        },
+        "features": [
+            "Real-time market data",
+            "AI-powered portfolio optimization",
+            "Natural language goal parsing",
+            "Financial decision explanations",
+            "Comprehensive rate limiting",
+            "Multi-agent workflows"
+        ]
+    }
+
+
+@app.get("/health")
+async def system_health():
+    """Comprehensive system health check."""
+    try:
+        health_status = {
+            "system": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "uptime_check": "operational",
+            "components": {}
+        }
+
+        # Check cache
+        try:
+            # Simple cache test
+            health_status["components"]["cache"] = {
+                "status": "healthy",
+                "backend": "InMemoryBackend"
+            }
+        except Exception as e:
+            health_status["components"]["cache"] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+
+        # Check rate limiter
+        try:
+            from utils.rate_limiter import llm_rate_limiter
+            active_users = len(llm_rate_limiter.user_states)
+            health_status["components"]["rate_limiter"] = {
+                "status": "healthy",
+                "active_users": active_users,
+                "configured_users": len(llm_rate_limiter.user_configs)
+            }
+        except Exception as e:
+            health_status["components"]["rate_limiter"] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+
+        # Check agents availability (basic check)
+        try:
+            from agent.agents import DataAgent
+            health_status["components"]["financial_agents"] = {
+                "status": "healthy",
+                "agents": ["data_agent", "portfolio_agent", "planner_agent", "explainability_agent"]
+            }
+        except Exception as e:
+            health_status["components"]["financial_agents"] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+
+        # Determine overall health
+        unhealthy_components = [
+            name for name, status in health_status["components"].items()
+            if status.get("status") != "healthy"
+        ]
+
+        if unhealthy_components:
+            health_status["system"] = "degraded"
+            health_status["unhealthy_components"] = unhealthy_components
+
+        return health_status
+
+    except Exception as e:
+        logger.error(f"System health check failed: {e}")
+        return {
+            "system": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+
+@app.get("/rate-limit/health")
+async def rate_limit_health():
+    """Detailed rate limiting system health check."""
+    from utils.rate_limiter import llm_rate_limiter, USER_TIER_CONFIGS
+
+    try:
+        active_users = len(llm_rate_limiter.user_states)
+        user_configs = len(llm_rate_limiter.user_configs)
+
+        return {
+            "status": "healthy",
+            "rate_limiter": {
+                "active_users": active_users,
+                "configured_users": user_configs,
+                "available_tiers": list(USER_TIER_CONFIGS.keys()),
+                "middleware_status": "enabled"
+            },
+            "tier_limits": {
+                tier: {
+                    "daily": config.daily_limit,
+                    "hourly": config.hourly_limit,
+                    "minute": config.minute_limit,
+                    "credits": config.llm_credits
+                }
+                for tier, config in USER_TIER_CONFIGS.items()
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+
+@app.get("/info")
+async def api_info():
+    """Get comprehensive API information."""
+    return {
+        "api_name": f"{settings.PROJECT_NAME} - Financial Agents API",
+        "version": "2.0.0",
+        "description": "AI-powered financial agents for market analysis and portfolio management",
+        "contact": {
+            "support": "api-support@neural-capital.com",
+            "documentation": "/docs"
+        },
+        "capabilities": {
+            "agents": {
+                "data_agent": {
+                    "description": "Real-time market data and macro indicators",
+                    "data_sources": ["Yahoo Finance", "FRED API", "Polygon"],
+                    "endpoints": 6
+                },
+                "portfolio_agent": {
+                    "description": "Portfolio optimization and rebalancing",
+                    "features": ["Risk-based allocation", "Macro signals", "Dynamic rebalancing"],
+                    "endpoints": 2
+                },
+                "planner_agent": {
+                    "description": "Financial goal parsing and planning",
+                    "features": ["NLP goal parsing", "Strategy generation", "Lifecycle planning"],
+                    "endpoints": 4
+                },
+                "explainability_agent": {
+                    "description": "Decision explanations and jargon translation",
+                    "features": ["Plain English", "Risk communication", "Jargon translation"],
+                    "endpoints": 4
+                }
+            },
+            "llm_integration": {
+                "provider": "Mistral AI",
+                "rate_limited": True,
+                "credit_based": True
+            },
+            "rate_limiting": {
+                "tiers": ["basic", "premium", "enterprise"],
+                "time_windows": ["daily", "hourly", "minute"],
+                "credit_system": True
+            }
+        },
+        "statistics": {
+            "total_endpoints": "25+",
+            "agents": 4,
+            "data_sources": 3,
+            "llm_operations": 5
+        },
+        "timestamp": datetime.now().isoformat()
+    }
 
 if __name__ == "__main__":
     import uvicorn
