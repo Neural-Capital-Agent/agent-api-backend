@@ -64,7 +64,7 @@ async def test_real_data_only():
     print()
 
     try:
-        from agent.agents import DataAgent
+        from agent.data_agent import DataAgent
         agent = DataAgent()
 
         # Test 1: Real Market Data Only

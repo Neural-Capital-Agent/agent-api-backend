@@ -2,7 +2,7 @@ import pytest
 import asyncio
 from datetime import datetime
 import uuid
-from agent.agents import ExplainabilityAgent
+from agent.explainability_agent import ExplainabilityAgent
 
 
 class TestExplainabilityAgent:

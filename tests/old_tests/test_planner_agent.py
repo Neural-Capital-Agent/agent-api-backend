@@ -1,7 +1,7 @@
 import pytest
 import asyncio
 from datetime import datetime
-from agent.agents import PlannerAgent
+from agent.planner_agent import PlannerAgent
 from agent.models import GoalType, RiskLevel, UserProfile
 
 

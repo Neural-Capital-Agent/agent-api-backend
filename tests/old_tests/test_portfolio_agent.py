@@ -2,7 +2,7 @@ import pytest
 import asyncio
 from datetime import datetime
 import uuid
-from agent.agents import PortfolioAgent
+from agent.portfolio_agent import PortfolioAgent
 from agent.models import RiskLevel, MacroSignals, MacroSignal
 
 
