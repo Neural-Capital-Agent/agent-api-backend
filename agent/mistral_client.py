@@ -17,12 +17,15 @@ class MistralLLMClient:
     Uses OpenAI-compatible API endpoint.
     """
 
-    def __init__(self, api_key: Optional[str] = None, base_url: str = "https://api.aimlapi.com/v1"):
+    def __init__(self, 
+                 api_key: Optional[str] = None, 
+                 base_url: str = "https://api.aimlapi.com/v1", 
+                 max_tokens: int = 2048):
         self.api_key = api_key or os.getenv("AI_ML_API_KEY")  # Match your CrewAI setup
         self.base_url = base_url
         self.client: Optional[httpx.AsyncClient] = None
         self.model = "mistralai/Mistral-7B-Instruct-v0.3"  # Match your CrewAI setup
-        self.max_tokens = 2048  # Match your CrewAI setup
+        self.max_tokens = max_tokens
         self.provider = "openai"  # OpenAI-compatible API
 
         if not self.api_key:
@@ -104,13 +107,14 @@ class MistralLLMClient:
         """
         try:
             system_prompt = """You are a financial planning assistant. Parse the user's financial goal and extract:
-    1. goal_type: one of "retirement", "house_down_payment", "emergency_fund", "child_education", "general_savings"
-    2. target_amount: numerical value (if mentioned)
-    3. time_horizon: years (if mentioned)
-    4. current_age: age (if mentioned)
-    5. confidence: your confidence in the parsing (0-1)
+                1. goal_type: one of "retirement", "house_down_payment", "emergency_fund", "child_education", "general_savings"
+                2. target_amount: numerical value (if mentioned)
+                3. time_horizon: years (if mentioned)
+                4. current_age: age (if mentioned)
+                5. confidence: your confidence in the parsing (0-1)
 
-Respond only with valid JSON format. If information is missing, use null for that field."""
+                Respond only with valid JSON format. If information is missing, use null for that field.
+            """
 
             messages = [
                 {"role": "system", "content": system_prompt},
