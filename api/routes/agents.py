@@ -12,7 +12,10 @@ import asyncio
 
 from api.schemas.user import UserUsageResponse
 from utils.rate_limiter import llm_rate_limiter
-from agent.agents import DataAgent, PortfolioAgent, PlannerAgent, ExplainabilityAgent
+from agent.data_agent import DataAgent
+from agent.portfolio_agent import PortfolioAgent
+from agent.planner_agent import PlannerAgent
+from agent.explainability_agent import ExplainabilityAgent
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
