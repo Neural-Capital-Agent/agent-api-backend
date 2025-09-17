@@ -729,4 +729,363 @@ async def batch_explain_actions(self, actions, batch_size=10):
     return explanations
 ```
 
+## API Endpoints and Examples
+
+### POST `/api/v1/agents/explainer/explain-decision`
+**Purpose**: Generate comprehensive explanation for a financial decision.
+
+**Input Parameters**:
+```json
+{
+  "action": {
+    "id": "action_123e4567-e89b-12d3-a456-426614174000",
+    "type": "rebalancing",
+    "agent_source": "portfolio_agent",
+    "parameters": {
+      "reason": "volatility_spike",
+      "current_allocations": {"SPY": 0.70, "BND": 0.30},
+      "target_allocations": {"SPY": 0.60, "BND": 0.35, "GLD": 0.05},
+      "macro_signals": ["vix_spike", "yield_curve_flattening"]
+    },
+    "timestamp": "2024-01-15T14:30:00Z",
+    "confidence": 0.87
+  },
+  "context": {
+    "user_experience_level": "beginner",
+    "explanation_detail": "comprehensive"
+  },
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "explainability_agent",
+  "explanation": {
+    "action_id": "action_123e4567-e89b-12d3-a456-426614174000",
+    "explanation": "Your portfolio was adjusted because market fear (measured by the VIX) spiked above 25, which historically indicates increased uncertainty. We reduced your stock exposure from 70% to 60% and added 5% to gold as a safety measure. This change is expected to reduce your portfolio's ups and downs by about 2% while maintaining most of your growth potential.",
+    "risk_assessment": "Moderate risk adjustment - some ups and downs expected, but historically recovers within 2-3 years. The current elevated market volatility suggests being more defensive is prudent for medium-term stability.",
+    "historical_context": "VIX spikes above 25 historically coincide with market corrections, but markets usually recover within 6 months. Similar volatility events in 2018, 2020, and 2022 saw recovery periods of 3-8 months on average.",
+    "confidence_score": 0.82,
+    "verification_hash": "a1b2c3d4e5f6789abc123def456",
+    "plain_language_summary": "Made your investments a bit safer due to market uncertainty",
+    "key_terms_explained": {
+      "vix_spike": "A jump in the market fear indicator",
+      "rebalancing": "Adjusting your investment mix",
+      "volatility": "How much prices move up and down"
+    }
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/explainer/translate-jargon`
+**Purpose**: Convert technical financial terms to plain English.
+
+**Input Parameters**:
+```json
+{
+  "text": "The portfolio exhibits elevated duration risk due to the yield_curve_inversion, requiring tactical rebalancing to optimize the sharpe_ratio while maintaining appropriate beta exposure.",
+  "target_audience": "beginner",
+  "preserve_technical_accuracy": true,
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "explainability_agent",
+  "translation": {
+    "original_text": "The portfolio exhibits elevated duration risk due to the yield_curve_inversion, requiring tactical rebalancing to optimize the sharpe_ratio while maintaining appropriate beta exposure.",
+    "translated_text": "The portfolio is sensitive to interest rate changes because long-term rates are below short-term rates. We need to adjust the investments to get better risk-adjusted returns while keeping the right amount of market exposure.",
+    "translated_terms": {
+      "duration_risk": "sensitivity to interest rate changes",
+      "yield_curve_inversion": "long-term rates below short-term rates",
+      "tactical_rebalancing": "adjusting the investments",
+      "sharpe_ratio": "risk-adjusted returns",
+      "beta_exposure": "market exposure"
+    },
+    "complexity_reduction": 0.75,
+    "confidence": 0.91,
+    "translation_method": "llm_enhanced"
+  },
+  "user_id": "user123"
+}
+```
+
+### GET `/api/v1/agents/explainer/define-term`
+**Purpose**: Get plain English definition for a specific financial term.
+
+**Input Parameters**:
+- `term` (query): Financial term to define (e.g., "sharpe_ratio", "beta")
+- `context` (query, optional): Context for definition (e.g., "portfolio", "risk", "performance")
+- `complexity_level` (query, optional): Explanation complexity ("beginner", "intermediate", "advanced")
+- `user_id` (query, optional): User ID for tracking
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "explainability_agent",
+  "definition": {
+    "term": "sharpe_ratio",
+    "simple_definition": "A measure of risk-adjusted return",
+    "detailed_definition": "A measure of risk-adjusted return calculated as (portfolio return - risk-free rate) divided by portfolio volatility.",
+    "plain_english": "A way to measure how much extra return you get for the extra risk you take. Higher numbers are better.",
+    "example": "A Sharpe ratio of 1.0 means you earned 1% of extra return for each 1% of extra risk taken.",
+    "context": "Higher Sharpe ratios indicate better risk-adjusted performance. Generally, ratios above 1.0 are considered good.",
+    "related_terms": ["volatility", "risk-adjusted return", "benchmark"],
+    "complexity_level": "beginner"
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/explainer/explain-risk`
+**Purpose**: Generate comprehensive risk explanation for portfolio or investment.
+
+**Input Parameters**:
+```json
+{
+  "portfolio": {
+    "portfolio_id": "portfolio_789a1b2c-3d4e-5f6g-7h8i-9j0k1l2m3n4o",
+    "risk_level": 4,
+    "allocations": {
+      "SPY": 0.50,
+      "QQQ": 0.20,
+      "BTC-USD": 0.10,
+      "BND": 0.20
+    },
+    "expected_return": 0.085,
+    "volatility": 0.145,
+    "total_value": 250000
+  },
+  "user_profile": {
+    "risk_tolerance": "moderate",
+    "time_horizon": 10,
+    "experience_level": "intermediate"
+  },
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "explainability_agent",
+  "risk_explanation": {
+    "overall_risk_level": "moderate_high",
+    "risk_summary": "Some ups and downs expected, but historically recovers within 2-3 years. Good for medium-term goals. Additional considerations: Cryptocurrency investments are highly volatile and speculative.",
+    "risk_factors": [
+      {
+        "factor": "crypto_exposure",
+        "level": "high",
+        "description": "10% in Bitcoin adds significant volatility",
+        "impact": "Could cause portfolio to swing 20-30% more than market",
+        "mitigation": "Consider reducing to 5% or less for stability"
+      },
+      {
+        "factor": "growth_tilt",
+        "level": "medium",
+        "description": "70% in growth-focused stocks (SPY, QQQ)",
+        "impact": "Higher potential returns but more ups and downs",
+        "mitigation": "Appropriate for 10+ year time horizon"
+      }
+    ],
+    "suitability_assessment": "Suitable for investors with 5+ year time horizon and moderate risk tolerance",
+    "worst_case_scenario": "Could lose 25-30% in severe market downturn",
+    "best_case_scenario": "Could gain 15-20% in strong market year",
+    "recovery_timeline": "Typically recovers within 18-24 months from major declines",
+    "recommendations": [
+      "Consider reducing cryptocurrency allocation",
+      "Portfolio aligns well with moderate risk tolerance",
+      "Good diversification across asset classes"
+    ]
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/explainer/portfolio-performance`
+**Purpose**: Explain portfolio performance metrics in plain English.
+
+**Input Parameters**:
+```json
+{
+  "performance_data": {
+    "total_return": 0.087,
+    "volatility": 0.142,
+    "sharpe_ratio": 0.68,
+    "max_drawdown": 0.087,
+    "alpha": 0.012,
+    "beta": 0.89,
+    "period": "1_year"
+  },
+  "benchmark": "S&P 500",
+  "explanation_style": "conversational",
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "explainability_agent",
+  "performance_explanation": {
+    "overall_summary": "Your portfolio gained 8.7% over the past year, which is solid performance. It had moderate ups and downs and provided good returns for the level of risk taken.",
+    "metric_explanations": {
+      "total_return": "Your portfolio gained 8.7% over the period, which is strong performance.",
+      "volatility": "Your portfolio had moderate ups and downs, which is normal for balanced investments.",
+      "sharpe_ratio": "Your portfolio provided good returns for the level of risk (0.68 is solid).",
+      "max_drawdown": "At its worst point, your portfolio was down 8.7% from its peak, showing good downside protection.",
+      "alpha": "Your portfolio beat the market by 1.2% after adjusting for risk.",
+      "beta": "Your portfolio moved about 89% as much as the overall market."
+    },
+    "benchmark_comparison": {
+      "vs_sp500": "Performed well compared to S&P 500",
+      "risk_adjusted_performance": "Better risk-adjusted returns than market average",
+      "relative_volatility": "Slightly less volatile than the broad market"
+    },
+    "key_insights": [
+      "Good balance of returns and risk management",
+      "Outperformed on a risk-adjusted basis",
+      "Reasonable downside protection during market stress"
+    ],
+    "areas_for_improvement": [
+      "Consider ways to reduce volatility further",
+      "Monitor for concentration risk in top holdings"
+    ]
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/explainer/create-educational-content`
+**Purpose**: Create educational content about financial topics.
+
+**Input Parameters**:
+```json
+{
+  "topic": "diversification",
+  "complexity_level": "beginner",
+  "include_examples": true,
+  "format": "structured",
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "explainability_agent",
+  "educational_content": {
+    "topic": "diversification",
+    "complexity_level": "beginner",
+    "explanation": "Diversification means not putting all your eggs in one basket. By spreading your investments across different types of assets, you reduce the risk that one bad investment will hurt your entire portfolio.",
+    "key_points": [
+      "Spread investments across different asset types",
+      "Reduces overall portfolio risk",
+      "May limit maximum gains but protects against large losses",
+      "Different assets perform well at different times"
+    ],
+    "examples": [
+      "Instead of buying only tech stocks, buy stocks, bonds, and real estate",
+      "Invest in both US and international markets",
+      "Mix growth stocks with value stocks",
+      "Include both large and small company stocks"
+    ],
+    "common_mistakes": [
+      "Thinking you're diversified with 10 tech stocks",
+      "Only investing in familiar companies or sectors",
+      "Ignoring international diversification",
+      "Not rebalancing when allocations drift"
+    ],
+    "related_terms": [
+      "Asset allocation",
+      "Correlation",
+      "Risk management",
+      "Modern Portfolio Theory"
+    ],
+    "action_steps": [
+      "Review your current holdings for concentration",
+      "Consider low-cost index funds for instant diversification",
+      "Set target allocations for different asset classes",
+      "Rebalance periodically to maintain diversification"
+    ]
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/explainer/generate-narrative`
+**Purpose**: Generate personalized narrative explanation for a decision.
+
+**Input Parameters**:
+```json
+{
+  "action": {
+    "type": "portfolio_rebalancing",
+    "reason": "age_milestone",
+    "details": "Reduced equity allocation due to approaching retirement"
+  },
+  "user_profile": {
+    "age": 58,
+    "risk_tolerance": "moderate",
+    "goals": [
+      {"type": "retirement", "target_date": "2030"}
+    ],
+    "experience_level": "intermediate"
+  },
+  "personalization_level": "high",
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "explainability_agent",
+  "narrative": {
+    "personalized_explanation": "At 58, you're approaching retirement in about 7 years, so this portfolio adjustment is designed to help you achieve your retirement goal while maintaining your moderate risk preference. We've reduced your stock exposure slightly to provide more stability as you near retirement, while still keeping enough growth potential to build your nest egg. This type of gradual shift toward more conservative investments is a time-tested approach that helps protect what you've built while you finish the final stretch to retirement.",
+    "life_stage_context": "As someone approaching retirement, capital preservation becomes increasingly important alongside growth.",
+    "goal_alignment": "This adjustment helps ensure your retirement savings stay on track while reducing the chance of a major setback close to your retirement date.",
+    "risk_context": "Your moderate risk preference means you want steady growth without extreme ups and downs - this adjustment supports that approach.",
+    "timeline_considerations": "With 7 years to retirement, you still have time to recover from market downturns, but less risk is appropriate.",
+    "confidence_level": "high",
+    "emotional_tone": "reassuring"
+  },
+  "user_id": "user123"
+}
+```
+
+## Error Responses
+
+All endpoints may return error responses in the following format:
+
+```json
+{
+  "detail": {
+    "error": "explanation_generation_failed",
+    "message": "Unable to generate explanation due to missing context",
+    "action_id": "action_123e4567-e89b-12d3-a456-426614174000"
+  }
+}
+```
+
+Common error codes:
+- `explanation_generation_failed`: Unable to generate explanation
+- `jargon_translation_failed`: Translation service unavailable
+- `invalid_action_format`: Action format is invalid or incomplete
+- `context_gathering_failed`: Unable to gather required context from other agents
+- `term_not_found`: Financial term not found in dictionary
+- `insufficient_data`: Not enough data to generate meaningful explanation
+
 This Explainability Agent ensures that complex AI-driven financial decisions are transparent, understandable, and trustworthy for users at all levels of financial sophistication.

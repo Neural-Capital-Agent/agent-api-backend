@@ -577,4 +577,297 @@ async def backtest_strategy(self, strategy_config, start_date, end_date):
     return backtest_results
 ```
 
+## API Endpoints and Examples
+
+### POST `/api/v1/agents/portfolio/build`
+**Purpose**: Generate initial portfolio allocation based on risk level and goal.
+
+**Input Parameters**:
+```json
+{
+  "risk_level": 3,
+  "goal": "growth",
+  "constraints": {
+    "max_equity": 0.8,
+    "min_bonds": 0.2,
+    "esg_only": false
+  },
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "portfolio_agent",
+  "portfolio": {
+    "id": "portfolio_123e4567-e89b-12d3-a456-426614174000",
+    "risk_level": 3,
+    "allocations": {
+      "SPY": 0.50,
+      "QQQ": 0.20,
+      "VXUS": 0.10,
+      "BND": 0.15,
+      "GLD": 0.05
+    },
+    "expected_return": 0.082,
+    "volatility": 0.126,
+    "created_at": "2024-01-15T10:30:00Z"
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/portfolio/rebalance`
+**Purpose**: Calculate rebalancing actions based on current portfolio and macro signals.
+
+**Input Parameters**:
+```json
+{
+  "current_portfolio": {
+    "id": "portfolio_123e4567-e89b-12d3-a456-426614174000",
+    "allocations": {
+      "SPY": 0.70,
+      "BND": 0.30
+    }
+  },
+  "signals": {
+    "yield_curve_inversion": {
+      "triggered": true,
+      "severity": "high"
+    },
+    "volatility_spike": {
+      "triggered": false
+    }
+  },
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "portfolio_agent",
+  "rebalance_action": {
+    "id": "rebalance_987fcdeb-51f2-45a3-9b2d-8c7f5e4d3c2b",
+    "portfolio_id": "portfolio_123e4567-e89b-12d3-a456-426614174000",
+    "current_allocations": {
+      "SPY": 0.70,
+      "BND": 0.30
+    },
+    "target_allocations": {
+      "SPY": 0.60,
+      "BND": 0.30,
+      "SHY": 0.05,
+      "GLD": 0.05
+    },
+    "trades": [
+      {
+        "ticker": "SPY",
+        "action": "sell",
+        "amount": 0.10,
+        "current_weight": 0.70,
+        "target_weight": 0.60
+      },
+      {
+        "ticker": "SHY",
+        "action": "buy",
+        "amount": 0.05,
+        "current_weight": 0.00,
+        "target_weight": 0.05
+      },
+      {
+        "ticker": "GLD",
+        "action": "buy",
+        "amount": 0.05,
+        "current_weight": 0.00,
+        "target_weight": 0.05
+      }
+    ],
+    "reason": "Rebalancing due to: yield curve inversion",
+    "timestamp": "2024-01-15T14:30:00Z"
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/portfolio/optimize`
+**Purpose**: Optimize portfolio weights using mean-variance optimization.
+
+**Input Parameters**:
+```json
+{
+  "expected_returns": {
+    "SPY": 0.10,
+    "BND": 0.04,
+    "GLD": 0.06
+  },
+  "covariance_matrix": {
+    "SPY": {"SPY": 0.025, "BND": 0.002, "GLD": 0.008},
+    "BND": {"SPY": 0.002, "BND": 0.001, "GLD": 0.001},
+    "GLD": {"SPY": 0.008, "BND": 0.001, "GLD": 0.040}
+  },
+  "risk_tolerance": 0.7,
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "portfolio_agent",
+  "optimized_weights": {
+    "SPY": 0.65,
+    "BND": 0.25,
+    "GLD": 0.10
+  },
+  "expected_return": 0.085,
+  "expected_volatility": 0.142,
+  "sharpe_ratio": 0.68,
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/portfolio/risk-metrics`
+**Purpose**: Calculate comprehensive risk metrics for portfolio.
+
+**Input Parameters**:
+```json
+{
+  "allocations": {
+    "SPY": 0.60,
+    "BND": 0.30,
+    "GLD": 0.10
+  },
+  "returns_data": {
+    "SPY": [0.012, -0.008, 0.015, 0.003, -0.012],
+    "BND": [0.002, 0.001, -0.001, 0.002, 0.001],
+    "GLD": [0.008, -0.005, 0.012, -0.003, 0.007]
+  },
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "portfolio_agent",
+  "risk_metrics": {
+    "volatility": 0.135,
+    "sharpe_ratio": 0.72,
+    "max_drawdown": 0.087,
+    "var_95": 0.024,
+    "beta": 0.85,
+    "tracking_error": 0.045
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/portfolio/backtest`
+**Purpose**: Backtest portfolio performance over specified period.
+
+**Input Parameters**:
+```json
+{
+  "allocations": {
+    "SPY": 0.60,
+    "BND": 0.30,
+    "GLD": 0.10
+  },
+  "start_date": "2020-01-01",
+  "end_date": "2023-12-31",
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "portfolio_agent",
+  "backtest_results": {
+    "start_date": "2020-01-01",
+    "end_date": "2023-12-31",
+    "total_return": 0.085,
+    "annualized_return": 0.083,
+    "volatility": 0.152,
+    "sharpe_ratio": 0.54,
+    "max_drawdown": 0.087,
+    "trades_executed": 12,
+    "benchmark_comparison": {
+      "spy_return": 0.095,
+      "alpha": -0.010,
+      "beta": 0.89
+    }
+  },
+  "user_id": "user123"
+}
+```
+
+### GET `/api/v1/agents/portfolio/recommendations`
+**Purpose**: Get specific rebalancing recommendations based on drift from target.
+
+**Input Parameters**:
+- `current_allocations` (query): Current portfolio allocations as JSON string
+- `target_allocations` (query): Target portfolio allocations as JSON string
+- `threshold` (query, optional): Minimum drift threshold (default: 0.05)
+- `user_id` (query, optional): User ID for tracking
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "portfolio_agent",
+  "recommendations": [
+    {
+      "asset": "SPY",
+      "action": "sell",
+      "current_weight": 0.75,
+      "target_weight": 0.60,
+      "drift": 0.15,
+      "recommended_amount": 0.15,
+      "priority": "high"
+    },
+    {
+      "asset": "BND",
+      "action": "buy",
+      "current_weight": 0.20,
+      "target_weight": 0.30,
+      "drift": 0.10,
+      "recommended_amount": 0.10,
+      "priority": "medium"
+    }
+  ],
+  "total_drift": 0.25,
+  "rebalancing_needed": true,
+  "user_id": "user123"
+}
+```
+
+## Error Responses
+
+All endpoints may return error responses in the following format:
+
+```json
+{
+  "detail": {
+    "error": "portfolio_optimization_failed",
+    "message": "Invalid risk level provided",
+    "risk_level": 6
+  }
+}
+```
+
+Common error codes:
+- `portfolio_optimization_failed`: Unable to optimize portfolio
+- `invalid_risk_level`: Risk level must be between 1 and 5
+- `insufficient_data`: Not enough historical data for analysis
+- `constraint_violation`: Portfolio constraints cannot be satisfied
+- `rebalancing_calculation_failed`: Unable to calculate rebalancing trades
+
 This Portfolio Agent provides sophisticated, institutional-quality portfolio management capabilities, automatically adapting to changing market conditions while maintaining appropriate risk levels for different investor profiles.

@@ -336,4 +336,184 @@ market_regime = await data_agent.get_current_market_regime()
 - **Range Checking**: Validates data within expected ranges
 - **Cross-Source Comparison**: Compares data across providers
 
+## API Endpoints and Examples
+
+### GET `/api/v1/agents/data/health`
+**Purpose**: Check Data Agent health and data source availability.
+
+**Input Parameters**: None
+
+**Output Example**:
+```json
+{
+  "agent": "data_agent",
+  "status": "healthy",
+  "data_sources": {
+    "yahoo_finance": "healthy",
+    "fred": "healthy"
+  },
+  "timestamp": "2024-01-15T16:00:00Z"
+}
+```
+
+### GET `/api/v1/agents/data/market/{ticker}`
+**Purpose**: Fetch real-time market data for a specific ticker.
+
+**Input Parameters**:
+- `ticker` (path): Stock symbol (e.g., "SPY", "AAPL")
+- `start_date` (query, optional): Start date for historical data (YYYY-MM-DD)
+- `end_date` (query, optional): End date for historical data (YYYY-MM-DD)
+- `user_id` (query, optional): User ID for tracking
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "data_agent",
+  "ticker": "SPY",
+  "data": {
+    "symbol": "SPY",
+    "price": 445.67,
+    "previous_close": 442.30,
+    "change": 3.37,
+    "change_percent": 0.76,
+    "timestamp": "2024-01-15T16:00:00Z"
+  },
+  "user_id": "anonymous"
+}
+```
+
+### GET `/api/v1/agents/data/market`
+**Purpose**: Fetch market data for all assets in the universe.
+
+**Input Parameters**:
+- `user_id` (query, optional): User ID for tracking
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "data_agent",
+  "data": [
+    {
+      "symbol": "SPY",
+      "price": 445.67,
+      "previous_close": 442.30,
+      "change": 3.37,
+      "change_percent": 0.76,
+      "timestamp": "2024-01-15T16:00:00Z"
+    },
+    {
+      "symbol": "QQQ",
+      "price": 378.92,
+      "previous_close": 376.15,
+      "change": 2.77,
+      "change_percent": 0.74,
+      "timestamp": "2024-01-15T16:00:00Z"
+    }
+  ],
+  "user_id": "anonymous"
+}
+```
+
+### GET `/api/v1/agents/data/macro/{indicator}`
+**Purpose**: Fetch macro-economic data from FRED API.
+
+**Input Parameters**:
+- `indicator` (path): Economic indicator code (e.g., "CPI", "10Y_TREASURY")
+- `date_range` (query, optional): Number of days to look back (default: 30)
+- `user_id` (query, optional): User ID for tracking
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "data_agent",
+  "indicator": "CPI",
+  "data": [
+    {
+      "indicator": "CPI",
+      "value": 3.2,
+      "date": "2024-01-01T00:00:00Z",
+      "frequency": "monthly"
+    },
+    {
+      "indicator": "CPI",
+      "value": 3.1,
+      "date": "2023-12-01T00:00:00Z",
+      "frequency": "monthly"
+    }
+  ],
+  "user_id": "anonymous"
+}
+```
+
+### GET `/api/v1/agents/data/volatility`
+**Purpose**: Fetch VIX and other volatility indicators.
+
+**Input Parameters**:
+- `user_id` (query, optional): User ID for tracking
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "data_agent",
+  "data": {
+    "vix": 18.45,
+    "vix_change": -1.23,
+    "vix_change_percent": -6.25,
+    "timestamp": "2024-01-15T16:00:00Z"
+  },
+  "user_id": "anonymous"
+}
+```
+
+### GET `/api/v1/agents/data/technical/{ticker}`
+**Purpose**: Fetch technical indicators for a given ticker.
+
+**Input Parameters**:
+- `ticker` (path): Stock symbol (e.g., "SPY")
+- `period` (query, optional): Time period for historical data (default: "1y")
+- `user_id` (query, optional): User ID for tracking
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "data_agent",
+  "ticker": "SPY",
+  "data": {
+    "sma_20": 442.15,
+    "sma_50": 438.92,
+    "sma_200": 425.33,
+    "rsi": 58.3,
+    "current_price": 445.67,
+    "timestamp": "2024-01-15T16:00:00Z"
+  },
+  "user_id": "anonymous"
+}
+```
+
+## Error Responses
+
+All endpoints may return error responses in the following format:
+
+```json
+{
+  "detail": {
+    "error": "market_data_fetch_failed",
+    "message": "Connection timeout to data provider",
+    "ticker": "SPY"
+  }
+}
+```
+
+Common error codes:
+- `market_data_fetch_failed`: Unable to fetch market data
+- `macro_data_unavailable`: Economic indicator not available
+- `invalid_ticker`: Invalid stock symbol provided
+- `rate_limit_exceeded`: API rate limit exceeded
+- `data_source_unavailable`: External data source is down
+
 This Data Agent forms the critical foundation of the Neural Capital system, ensuring all other agents have access to accurate, timely, and comprehensive financial market data for making informed investment decisions.

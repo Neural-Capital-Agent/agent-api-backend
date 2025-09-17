@@ -793,4 +793,461 @@ async def update_plan(self, plan_id, new_circumstances):
     return updated_plan
 ```
 
+## API Endpoints and Examples
+
+### POST `/api/v1/agents/planner/parse-goal`
+**Purpose**: Parse natural language goal into structured format.
+
+**Input Parameters**:
+```json
+{
+  "goal_text": "I want to save $500,000 for retirement in 30 years. I'm 35 years old and have moderate risk tolerance.",
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "planner_agent",
+  "parsed_goal": {
+    "goal_type": "RETIREMENT",
+    "target_amount": 500000,
+    "time_horizon": 30,
+    "current_age": 35,
+    "risk_tolerance": "BALANCED",
+    "confidence_score": 0.92,
+    "extracted_keywords": ["retirement", "save", "$500,000", "30 years", "35 years old"],
+    "extraction_method": "llm_enhanced"
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/planner/create-strategy`
+**Purpose**: Generate investment strategy based on goal and user profile.
+
+**Input Parameters**:
+```json
+{
+  "goal": {
+    "goal_type": "RETIREMENT",
+    "target_amount": 500000,
+    "time_horizon_years": 30,
+    "current_age": 35,
+    "risk_tolerance": "BALANCED"
+  },
+  "user_profile": {
+    "age": 35,
+    "income": 75000,
+    "current_savings": 50000,
+    "risk_tolerance": "BALANCED",
+    "investment_experience": "intermediate"
+  },
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "planner_agent",
+  "strategy": {
+    "strategy_id": "strategy_456d7e8f-9g0h-1i2j-3k4l-5m6n7o8p9q0r",
+    "goal_type": "RETIREMENT",
+    "recommended_allocation": {
+      "equities": 0.70,
+      "bonds": 0.25,
+      "alternatives": 0.05
+    },
+    "detailed_allocation": {
+      "domestic_equity": 0.45,
+      "international_equity": 0.25,
+      "bonds": 0.25,
+      "alternatives": 0.05
+    },
+    "risk_level": "BALANCED",
+    "expected_return": 0.075,
+    "expected_volatility": 0.12,
+    "time_horizon": 30,
+    "constraints": {
+      "min_bond_allocation": 0.20,
+      "max_single_asset": 0.30,
+      "rebalancing_frequency": "quarterly"
+    },
+    "projected_outcomes": {
+      "median_outcome": 687500,
+      "conservative_outcome": 425000,
+      "optimistic_outcome": 950000,
+      "probability_of_success": 0.78
+    },
+    "monthly_contribution_needed": 856
+  },
+  "user_id": "user123"
+}
+```
+
+### GET `/api/v1/agents/planner/glide-path`
+**Purpose**: Calculate age-appropriate allocation glide path.
+
+**Input Parameters**:
+- `age` (query): Current age
+- `retirement_age` (query, optional): Target retirement age (default: 65)
+- `user_id` (query, optional): User ID for tracking
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "planner_agent",
+  "glide_path": {
+    "glide_path_id": "glide_123e4567-e89b-12d3-a456-426614174000",
+    "target_retirement_age": 65,
+    "current_age": 35,
+    "age_ranges": {
+      "25-34": {
+        "equities": 0.90,
+        "bonds": 0.10,
+        "alternatives": 0.00
+      },
+      "35-44": {
+        "equities": 0.80,
+        "bonds": 0.20,
+        "alternatives": 0.00
+      },
+      "45-54": {
+        "equities": 0.70,
+        "bonds": 0.25,
+        "alternatives": 0.05
+      },
+      "55-64": {
+        "equities": 0.60,
+        "bonds": 0.35,
+        "alternatives": 0.05
+      },
+      "65+": {
+        "equities": 0.40,
+        "bonds": 0.50,
+        "cash": 0.10
+      }
+    },
+    "rebalancing_triggers": {
+      "age_milestone": true,
+      "allocation_drift": 0.05,
+      "market_conditions": true
+    }
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/planner/create-plan`
+**Purpose**: Create comprehensive financial plan based on goal and strategy.
+
+**Input Parameters**:
+```json
+{
+  "goal": {
+    "type": "RETIREMENT",
+    "target_amount": 500000,
+    "time_horizon": 30,
+    "current_age": 35
+  },
+  "strategy": {
+    "expected_return": 0.075,
+    "monthly_contribution_needed": 856,
+    "risk_level": "BALANCED"
+  },
+  "user_profile": {
+    "current_savings": 50000,
+    "monthly_capacity": 1000,
+    "income": 75000
+  },
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "planner_agent",
+  "plan": {
+    "plan_id": "plan_987f6e5d-4c3b-2a19-8e7f-6d5c4b3a2190",
+    "goal_id": "goal_789a1b2c-3d4e-5f6g-7h8i-9j0k1l2m3n4o",
+    "plan_summary": {
+      "goal": "Accumulate $500,000 for retirement by age 65",
+      "time_horizon": "30 years",
+      "required_monthly_savings": 856,
+      "current_monthly_capacity": 1000,
+      "surplus_capacity": 144,
+      "probability_of_success": 0.78
+    },
+    "implementation_steps": [
+      {
+        "step": 1,
+        "action": "Open target-date retirement fund",
+        "description": "Start with a 2055 target-date fund for automatic diversification",
+        "priority": "immediate",
+        "estimated_time": "1 week"
+      },
+      {
+        "step": 2,
+        "action": "Set up automatic contributions",
+        "description": "Automate $856/month contributions from paycheck",
+        "priority": "immediate",
+        "estimated_time": "1 day"
+      }
+    ],
+    "milestones": [
+      {
+        "age": 40,
+        "target_balance": 125000,
+        "allocation_review": "Consider reducing equity to 75%"
+      },
+      {
+        "age": 50,
+        "target_balance": 275000,
+        "allocation_review": "Reduce equity to 65%, increase bonds"
+      }
+    ],
+    "assumptions": {
+      "inflation_rate": 0.025,
+      "salary_growth": 0.03,
+      "contribution_increases": 0.03,
+      "tax_rate": 0.22,
+      "social_security": 2400
+    },
+    "risk_factors": [
+      "Market volatility could impact returns",
+      "Inflation may reduce purchasing power",
+      "Job loss could interrupt contributions"
+    ]
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/planner/retirement-needs`
+**Purpose**: Calculate comprehensive retirement funding needs.
+
+**Input Parameters**:
+```json
+{
+  "current_age": 35,
+  "retirement_age": 65,
+  "current_income": 75000,
+  "replacement_ratio": 0.8,
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "planner_agent",
+  "retirement_analysis": {
+    "years_to_retirement": 30,
+    "retirement_years": 20,
+    "annual_need_today": 60000,
+    "annual_need_at_retirement": 145900,
+    "total_corpus_needed": 2918000,
+    "required_monthly_savings": 2850,
+    "replacement_ratio": 0.8,
+    "assumptions": {
+      "inflation_rate": 0.03,
+      "expected_return": 0.07,
+      "life_expectancy": 85,
+      "social_security_benefit": 28800
+    }
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/planner/tax-strategy`
+**Purpose**: Optimize tax strategy for achieving financial goals.
+
+**Input Parameters**:
+```json
+{
+  "goal": {
+    "goal_type": "RETIREMENT",
+    "target_amount": 500000,
+    "time_horizon": 30,
+    "current_age": 35
+  },
+  "income": 75000,
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "planner_agent",
+  "tax_strategy": {
+    "goal_type": "RETIREMENT",
+    "tax_advantaged_accounts": [
+      {
+        "account_type": "401k",
+        "annual_limit": 23000,
+        "employer_match": "Maximize employer match first",
+        "tax_benefit": "Pre-tax contributions reduce current taxable income"
+      },
+      {
+        "account_type": "traditional_ira",
+        "annual_limit": 7000,
+        "tax_benefit": "Deductible contributions for retirement savings"
+      },
+      {
+        "account_type": "hsa",
+        "annual_limit": 4300,
+        "tax_benefit": "Triple tax advantage - deductible, growth, and withdrawals for medical"
+      }
+    ],
+    "contribution_priority": [
+      "401k up to employer match",
+      "HSA maximum contribution",
+      "IRA maximum contribution",
+      "Remaining 401k space"
+    ],
+    "estimated_tax_savings": 5750,
+    "recommended_allocation": {
+      "pre_tax_401k": 15000,
+      "hsa": 4300,
+      "traditional_ira": 7000
+    }
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/planner/bond-ladder`
+**Purpose**: Create bond ladder strategy for conservative goals.
+
+**Input Parameters**:
+```json
+{
+  "total_amount": 100000,
+  "time_horizon": 10,
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "planner_agent",
+  "bond_ladder": {
+    "total_amount": 100000,
+    "time_horizon_years": 10,
+    "ladder_rungs": [
+      {
+        "maturity": "3M",
+        "amount": 10000,
+        "yield": 0.048,
+        "annual_income": 480
+      },
+      {
+        "maturity": "6M",
+        "amount": 10000,
+        "yield": 0.050,
+        "annual_income": 500
+      },
+      {
+        "maturity": "1Y",
+        "amount": 10000,
+        "yield": 0.052,
+        "annual_income": 520
+      },
+      {
+        "maturity": "2Y",
+        "amount": 10000,
+        "yield": 0.049,
+        "annual_income": 490
+      }
+    ],
+    "total_annual_income": 4550,
+    "average_yield": 0.0455,
+    "rollover_strategy": "Reinvest maturing bonds at current rates"
+  },
+  "user_id": "user123"
+}
+```
+
+### POST `/api/v1/agents/planner/feasibility`
+**Purpose**: Assess feasibility of reaching a financial goal.
+
+**Input Parameters**:
+```json
+{
+  "target_amount": 500000,
+  "monthly_savings": 1000,
+  "years": 30,
+  "expected_return": 0.07,
+  "user_id": "user123"
+}
+```
+
+**Output Example**:
+```json
+{
+  "success": true,
+  "agent": "planner_agent",
+  "feasibility_assessment": {
+    "is_feasible": true,
+    "projected_amount": 1220000,
+    "shortfall": 0,
+    "surplus": 720000,
+    "feasibility_score": 1.0,
+    "recommended_adjustments": [
+      "Goal is easily achievable with current savings rate",
+      "Consider increasing goal amount or reducing time horizon",
+      "Excess capacity could fund additional goals"
+    ],
+    "alternative_scenarios": {
+      "conservative_return": {
+        "expected_return": 0.05,
+        "projected_amount": 832000,
+        "still_feasible": true
+      },
+      "optimistic_return": {
+        "expected_return": 0.09,
+        "projected_amount": 1810000,
+        "surplus": 1310000
+      }
+    }
+  },
+  "user_id": "user123"
+}
+```
+
+## Error Responses
+
+All endpoints may return error responses in the following format:
+
+```json
+{
+  "detail": {
+    "error": "goal_parsing_failed",
+    "message": "Unable to extract clear financial goal from text",
+    "goal_text": "I want to save money"
+  }
+}
+```
+
+Common error codes:
+- `goal_parsing_failed`: Unable to parse natural language goal
+- `invalid_goal_parameters`: Goal parameters are inconsistent or invalid
+- `strategy_generation_failed`: Unable to generate appropriate strategy
+- `insufficient_time_horizon`: Time horizon too short for goal
+- `unrealistic_expectations`: Goal not achievable with given constraints
+- `missing_user_profile`: Required user information not provided
+
 This Planner Agent provides sophisticated financial planning capabilities that translate natural language goals into actionable, personalized investment strategies with appropriate risk management and lifecycle considerations.
