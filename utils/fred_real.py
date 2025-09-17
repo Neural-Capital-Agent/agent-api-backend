@@ -5,7 +5,10 @@ import os
 import httpx
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
 FRED_API_KEY = os.getenv('FRED_KEY')
 FRED_BASE_URL = "https://api.stlouisfed.org/fred"
@@ -73,7 +76,7 @@ class fred:
 
     @staticmethod
     async def get_fred_data(series_id: str):
-        """Get FRED data for a series - REAL API ONLY (async)"""
+        """Get FRED data for a series - real API only, no fallback data"""
         # Check if we have API key
         if not FRED_API_KEY:
             raise Exception(f"FRED API key required. Set FRED_KEY environment variable to access real data for {series_id}")
@@ -81,6 +84,10 @@ class fred:
         try:
             client = get_fred_client()
             # client.get_series_data is async
-            return await client.get_series_data(series_id)
+            data = await client.get_series_data(series_id)
+            if not data:
+                raise Exception(f"No data returned from FRED API for {series_id}")
+            return data
         except Exception as e:
-            raise Exception(f"Real FRED data required for {series_id}: {str(e)}")
+            # Don't return fake data - let the calling code handle the error
+            raise Exception(f"Failed to fetch real FRED data for {series_id}: {str(e)}")

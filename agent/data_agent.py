@@ -18,19 +18,22 @@ except ImportError:
     from utils.fred import fred
 from .models import MarketData, MacroData, MacroSignal, MacroSignals
 from .config import config
-from .shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get
-try:
-    from .mistral_client import mistral_client
-except ImportError:
-    mistral_client = None
+from .shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
+# LLM imports commented out for pure data retrieval focus
+# try:
+#     from .mistral_client import mistral_client
+# except ImportError:
+#     mistral_client = None
 
 logger = logging.getLogger(__name__)
 
 
 class DataAgent(BaseAgent):
     """
-    Data Agent responsible for collecting, processing, and providing financial news,
-    real-time market prices, and macro-economic data to other agents.
+    Data Agent responsible for collecting and providing financial data.
+    Focuses purely on data retrieval from external sources.
+    LLM validation capabilities are commented out to maintain pure data focus.
+    Provides real-time market prices and macro-economic data to other agents.
     """
 
     def __init__(self, coral_server_url: str = "http://localhost:5555"):
@@ -79,22 +82,10 @@ class DataAgent(BaseAgent):
                 change_percent=safe_get(stock_data, "changePercent", 0),
                 timestamp=datetime.now()
             )
-        except (ConnectionError, TimeoutError, ValueError, KeyError) as e:
-            return ErrorHandler.handle_with_fallback(
-                f"fetch_market_data_{ticker}",
-                "data_agent",
-                "market_data",
-                e,
-                symbol=ticker
-            )
         except Exception as e:
-            return ErrorHandler.handle_with_fallback(
-                f"fetch_market_data_{ticker}",
-                "data_agent",
-                "market_data",
-                e,
-                symbol=ticker
-            )
+            logger.error(f"Failed to fetch market data for {ticker}: {e}")
+            # Don't use fallback - let the error propagate up
+            raise Exception(f"Market data fetch failed for {ticker}: {str(e)}")
 
     async def fetch_all_market_data(self) -> List[MarketData]:
         """
@@ -304,13 +295,14 @@ class DataAgent(BaseAgent):
     # Coral Protocol Integration Methods
     async def validate_signals(self, signals: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate macro signals for other agents via Coral Protocol.
+        Validate macro signals using rule-based logic only.
+        LLM validation is commented out to focus on pure data operations.
 
         Args:
             signals: Dictionary containing signal data to validate
 
         Returns:
-            Validation result with confidence score
+            Validation result with confidence score based on market data
         """
         try:
             # Fetch current market data for validation
@@ -328,19 +320,19 @@ class DataAgent(BaseAgent):
                 "treasury_data": treasury_data
             }
 
-            # Try using Mistral LLM for advanced signal validation
-            llm_validation = await safe_coral_invoke(
-                self.coral_client,
-                "llm_agent",
-                "validate_signals",
-                {"signals": signals, "market_data": market_data},
-                "validate_signals"
-            )
+            # LLM validation commented out for pure data focus
+            # llm_validation = await safe_coral_invoke(
+            #     self.coral_client,
+            #     "llm_agent",
+            #     "validate_signals",
+            #     {"signals": signals, "market_data": market_data},
+            #     "validate_signals"
+            # )
+            #
+            # if llm_validation and llm_validation.get("is_valid") is not None and not llm_validation.get("error"):
+            #     return llm_validation
 
-            if llm_validation and llm_validation.get("is_valid") is not None and not llm_validation.get("error"):
-                return llm_validation
-
-            # Use rule-based validation with real data
+            # Use rule-based validation with real data only
             validation_score = 0.0
             validation_details = {}
 
@@ -389,18 +381,13 @@ class DataAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Error validating signals: {e}")
-            if config.should_use_fallbacks():
-                fallback = config.get_fallback("data_agent", "validation")
-                fallback["error"] = str(e)
-                fallback["timestamp"] = get_current_timestamp()
-                return fallback
-            else:
-                return {
-                    "is_valid": False,
-                    "confidence": 0.0,
-                    "error": str(e),
-                    "timestamp": get_current_timestamp()
-                }
+            # No fallbacks - return error information only
+            return {
+                "is_valid": False,
+                "confidence": 0.0,
+                "error": str(e),
+                "timestamp": get_current_timestamp()
+            }
 
     async def get_market_context(self, timestamp: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -481,7 +468,4 @@ class DataAgent(BaseAgent):
 
         except (KeyError, TypeError, AttributeError) as e:
             logger.warning(f"Error determining market regime: {e}")
-            if config.should_use_fallbacks():
-                return config.get_fallback("data_agent", "market_regime")
-            else:
-                return "unknown"
+            return "unknown"

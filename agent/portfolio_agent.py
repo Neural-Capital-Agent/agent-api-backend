@@ -49,26 +49,45 @@ class PortfolioAgent(BaseAgent):
 
             # Get base allocation for risk level
             base_alloc = self.base_allocations[risk_enum]
+            logger.info(f"Base allocation for risk level {risk_level}: {base_alloc}")
 
             # Flatten allocations
             allocations = {}
             for category, assets in base_alloc.items():
-                for asset, weight in assets.items():
-                    if weight > 0:
-                        allocations[asset] = weight
+                if isinstance(assets, dict):
+                    for asset, weight in assets.items():
+                        if weight > 0:
+                            allocations[asset] = weight
+                else:
+                    # Handle simple allocation format
+                    allocations[category] = assets
+
+            logger.info(f"Flattened allocations: {allocations}")
+
+            # Ensure we have some allocations - error if empty, no fake data
+            if not allocations:
+                raise ValueError(f"No valid allocations found for risk level {risk_level}. Check portfolio configuration.")
 
             # Apply constraints if provided
             if constraints:
                 allocations = self._apply_constraints(allocations, constraints)
 
-            # Calculate expected return and volatility
-            metrics_result = await self._calculate_portfolio_metrics(allocations)
-            if isinstance(metrics_result, (tuple, list)) and len(metrics_result) == 2:
-                expected_return, volatility = metrics_result
-            else:
-                # Use configuration fallbacks for portfolio metrics
-                expected_return = config.get_fallback("portfolio_agent", "expected_return")
-                volatility = config.get_fallback("portfolio_agent", "volatility")
+            # Calculate expected return and volatility - no defaults, must be real calculation
+            try:
+                metrics_result = await self._calculate_portfolio_metrics(allocations)
+                if isinstance(metrics_result, (tuple, list)) and len(metrics_result) == 2:
+                    expected_return, volatility = metrics_result
+                else:
+                    raise ValueError("Portfolio metrics calculation returned invalid format")
+
+                if expected_return is None or volatility is None:
+                    raise ValueError("Portfolio metrics calculation returned None values")
+
+            except Exception as e:
+                logger.error(f"Portfolio metrics calculation failed: {e}")
+                raise Exception(f"Failed to calculate portfolio metrics for given allocations: {str(e)}")
+
+            logger.info(f"Portfolio metrics - Expected return: {expected_return:.2%}, Volatility: {volatility:.2%}")
 
             portfolio = Portfolio(
                 id=portfolio_id,
@@ -80,15 +99,19 @@ class PortfolioAgent(BaseAgent):
             )
 
             logger.info(f"Built portfolio {portfolio_id} with risk level {risk_level}")
-            # Convert to dict for API compatibility
-            return {
+            # Convert to dict for API compatibility - wrap in portfolio key for test compatibility
+            portfolio_dict = {
                 "id": portfolio.id,
                 "risk_level": portfolio.risk_level.value if hasattr(portfolio.risk_level, 'value') else str(portfolio.risk_level),
                 "allocations": portfolio.allocations,
                 "expected_return": portfolio.expected_return,
-                "volatility": portfolio.volatility,
+                "expected_risk": portfolio.volatility,  # Use expected_risk key as test expects
+                "sharpe_ratio": portfolio.expected_return / portfolio.volatility if portfolio.volatility > 0 else 0,
                 "created_at": portfolio.created_at.isoformat() if hasattr(portfolio.created_at, 'isoformat') else str(portfolio.created_at)
             }
+
+            logger.info(f"Final portfolio dict: {portfolio_dict}")
+            return {"portfolio": portfolio_dict}
 
         except (ValueError, TypeError, KeyError) as e:
             logger.error(f"Error building portfolio: {e}")
@@ -143,15 +166,17 @@ class PortfolioAgent(BaseAgent):
             )
 
             # Convert to dict for API compatibility
-            return {
+            rebalance_dict = {
                 "id": rebalance_action.id,
                 "portfolio_id": rebalance_action.portfolio_id,
                 "current_allocations": rebalance_action.current_allocations,
                 "target_allocations": rebalance_action.target_allocations,
-                "trades": rebalance_action.trades,
+                "actions": rebalance_action.trades,  # Use 'actions' key as test expects
                 "reason": rebalance_action.reason,
                 "timestamp": rebalance_action.timestamp.isoformat() if hasattr(rebalance_action.timestamp, 'isoformat') else str(rebalance_action.timestamp)
             }
+
+            return rebalance_dict
 
         except (ValueError, TypeError, AttributeError, KeyError) as e:
             logger.error(f"Error calculating rebalancing: {e}")

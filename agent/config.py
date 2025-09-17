@@ -14,7 +14,7 @@ load_dotenv()
 @dataclass
 class AgentConfig:
     """Base configuration for all agents"""
-    use_fallbacks: bool = True
+    use_fallbacks: bool = False  # No fallbacks by default - must use real data
     log_fallback_usage: bool = True
     environment: str = "development"  # development, staging, production
 
@@ -25,6 +25,9 @@ class DataAgentConfig:
     # FRED API mappings
     MACRO_INDICATORS = {
         "CPI": "CPIAUCNS",
+        "GDP": "GDP",
+        "INFLATION": "CPIAUCNS",  # Map to CPI
+        "INTEREST_RATES": "FEDFUNDS",  # Map to Fed Funds Rate
         "2Y_TREASURY": "GS2",
         "10Y_TREASURY": "GS10",
         "FED_FUNDS_RATE": "FEDFUNDS",
@@ -154,6 +157,11 @@ class PlannerAgentConfig:
             "time_horizon": (10, 18),
             "allocation": {"equities": 0.60, "bonds": 0.40},
             "risk_level": 3  # BALANCED
+        },
+        "education": {
+            "time_horizon": (10, 18),
+            "allocation": {"equities": 0.60, "bonds": 0.40},
+            "risk_level": 3  # BALANCED
         }
     }
 
@@ -169,6 +177,9 @@ class PlannerAgentConfig:
             "emergency", "emergency fund", "safety net", "rainy day"
         ],
         "child_education": [
+            "child education", "college", "university", "school", "tuition", "529"
+        ],
+        "education": [
             "education", "college", "university", "school", "tuition", "529"
         ]
     }
@@ -178,7 +189,8 @@ class PlannerAgentConfig:
         "house_down_payment": 100000,
         "retirement": 1000000,
         "emergency_fund": 25000,
-        "child_education": 200000
+        "child_education": 200000,
+        "education": 500000
     }
 
     # Default time horizons by goal type
@@ -186,7 +198,8 @@ class PlannerAgentConfig:
         "house_down_payment": 5,
         "retirement": 30,
         "emergency_fund": 1,
-        "child_education": 15
+        "child_education": 15,
+        "education": 15
     }
 
     # Expected returns by asset class

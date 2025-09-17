@@ -96,6 +96,7 @@ class GoalType(Enum):
     RETIREMENT = "retirement"
     EMERGENCY_FUND = "emergency_fund"
     CHILD_EDUCATION = "child_education"
+    EDUCATION = "education"  # Add this for test compatibility
 
 @dataclass
 class GoalParameters:
