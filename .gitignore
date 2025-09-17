@@ -172,3 +172,5 @@ utils/__pycache__/Supabase.cpython-312.pyc
 
 .claude/
 .claude
+
+temp_storage/
