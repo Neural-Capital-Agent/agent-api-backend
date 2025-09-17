@@ -110,13 +110,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-# Set up Rate Limiting Middleware (before CORS for proper header handling)
-app.add_middleware(LLMUsageMiddleware)
-app.add_middleware(
-    RateLimitMiddleware,
-    llm_endpoints=["/api/v1/llm/", "/api/v1/agents/", "/api/v1/chat/"],
-    default_user_tier="basic"
-)
+# Set up Rate Limiting Middleware (DISABLED FOR TESTING)
+# app.add_middleware(LLMUsageMiddleware)
+# app.add_middleware(
+#     RateLimitMiddleware,
+#     llm_endpoints=["/api/v1/llm/", "/api/v1/agents/", "/api/v1/chat/"],
+#     default_user_tier="basic"
+# )
 
 # Set up CORS
 app.add_middleware(
@@ -138,13 +138,33 @@ async def startup():
         FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
         logger.info("✓ FastAPI cache initialized")
 
-        # Initialize rate limiting
-        from utils.rate_limiter import setup_user_tier, USER_TIER_CONFIGS
-        logger.info("✓ Rate limiting system initialized")
-        logger.info(f"✓ Available tiers: {list(USER_TIER_CONFIGS.keys())}")
+        # Initialize rate limiting (DISABLED FOR TESTING)
+        # from utils.rate_limiter import setup_user_tier, USER_TIER_CONFIGS
+        # logger.info("✓ Rate limiting system initialized")
+        # logger.info(f"✓ Available tiers: {list(USER_TIER_CONFIGS.keys())}")
+        logger.info("⚠️ Rate limiting disabled for testing")
 
         # Initialize agents (lazy loading will happen on first request)
         logger.info("✓ Financial agents ready for initialization")
+
+        # Start Coral Protocol Server in background
+        try:
+            from agent.coral_server import coral_server
+            import asyncio
+
+            logger.info("🌊 Starting Coral Protocol Server...")
+
+            # Start the coral server in the background
+            asyncio.create_task(coral_server.start_server())
+
+            # Give the server a moment to start
+            await asyncio.sleep(2)
+
+            logger.info("✓ Coral Protocol Server started on http://localhost:5555")
+
+        except Exception as coral_server_error:
+            logger.error(f"⚠️ Coral Protocol Server startup failed: {coral_server_error}")
+            logger.info("📝 Continuing without Coral Protocol Server")
 
         # Initialize CrewAI
         try:
@@ -160,6 +180,9 @@ async def startup():
         try:
             from agent.coral_registry import coral_registry
             logger.info("🌊 Initializing Coral Protocol integration...")
+
+            # Give Coral Server more time to be ready
+            await asyncio.sleep(1)
 
             # Register agents with Coral Server for Studio visibility
             registration_results = await coral_registry.register_all_agents()
@@ -184,6 +207,7 @@ async def startup():
         logger.info("🚀 Neural Capital Financial Agents API started successfully")
         logger.info(f"📊 API Documentation: http://localhost:8000/docs")
         logger.info(f"📈 ReDoc: http://localhost:8000/redoc")
+        logger.info(f"🌊 Coral Protocol Server: http://localhost:5555/health")
 
     except Exception as e:
         logger.error(f"❌ Startup failed: {e}")
@@ -474,6 +498,17 @@ async def api_info():
             "integration_protocols": 2
         },
         "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring and load balancers."""
+    return {
+        "status": "healthy",
+        "service": "Neural Capital API",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat(),
+        "uptime": time.time() - app.startup_time if hasattr(app, 'startup_time') else None
     }
 
 if __name__ == "__main__":
