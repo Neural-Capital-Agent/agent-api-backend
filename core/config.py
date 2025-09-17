@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     FRED_KEY: str = os.getenv("FRED_KEY", "")
     FRED_URL: str = os.getenv("URL_FRED", "")
 
+    # Coral Protocol settings
+    CORAL_SERVER_URL: str = os.getenv("CORAL_SERVER_URL", "http://localhost:5555")
+    CORAL_API_BASE_URL: str = os.getenv("CORAL_API_BASE_URL", "http://localhost:8000")
+
     # Cache settings
     CACHE_EXPIRATION_SECS: int = 300  # 5 minutes
 
