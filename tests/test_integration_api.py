@@ -47,7 +47,7 @@ class TestAPIIntegration:
         assert response.status_code == 200
 
         # Test that we get a valid OpenAPI spec
-        response = client.get("/openapi.json")
+        response = client.get("/api/v1/openapi.json")
         assert response.status_code == 200
 
         openapi_spec = response.json()
@@ -64,7 +64,7 @@ class TestAPIIntegration:
         }
 
         try:
-            response = client.post("/api/user/create", json=user_data)
+            response = client.post("/api/v1/user/", json=user_data)
             # Should either succeed or give validation error (both are valid responses)
             assert response.status_code in [200, 201, 422, 400]
 
@@ -156,16 +156,16 @@ class TestAPIIntegration:
     def test_api_error_handling(self, client):
         """Test API-level error handling"""
         # Test invalid endpoint
-        response = client.get("/api/nonexistent/endpoint")
+        response = client.get("/api/v1/nonexistent/endpoint")
         assert response.status_code == 404
 
         # Test invalid method
-        response = client.delete("/api/stocks/SPY")  # Assuming DELETE not supported
+        response = client.delete("/api/v1/stocks/SPY")  # Assuming DELETE not supported
         assert response.status_code in [404, 405]
 
         # Test malformed JSON
         response = client.post(
-            "/api/user/create",
+            "/api/v1/user/",
             data="invalid json",
             headers={"Content-Type": "application/json"}
         )
@@ -175,7 +175,7 @@ class TestAPIIntegration:
         """Test request validation across endpoints"""
         # Test missing required fields
         try:
-            response = client.post("/api/user/create", json={})
+            response = client.post("/api/v1/user/", json={})
             assert response.status_code in [422, 400]  # Validation error
 
             if response.status_code == 422:
