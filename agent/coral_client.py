@@ -67,13 +67,43 @@ class CoralClient:
                 "endpoint": endpoint
             }
 
-            # Real Coral Protocol registration would go here
-            # For now, just log the registration attempt
             logger.info(f"Attempting to register agent {self.agent_id} with Coral Protocol")
             logger.info(f"Agent type: {agent_type}, Capabilities: {capabilities}")
 
             # Only register if we have a valid agent_id
-            if self.agent_id:
+            if not self.agent_id:
+                logger.error("Cannot register agent: missing agent_id")
+                return False
+
+            # Try to register with the actual Coral Protocol server
+            try:
+                response = await self.client.post(
+                    f"{self.coral_server_url}/register",
+                    json=registration_data,
+                    timeout=10.0
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    logger.info(f"✓ Successfully registered {self.agent_id} with Coral Server")
+
+                    # Store in local registry too
+                    self.registered_agents[self.agent_id] = AgentRegistration(
+                        agent_id=self.agent_id,
+                        agent_type=agent_type,
+                        capabilities=capabilities,
+                        endpoint=endpoint
+                    )
+                    return True
+                else:
+                    logger.error(f"Registration failed with status {response.status_code}: {response.text}")
+                    return False
+
+            except Exception as server_error:
+                logger.warning(f"Failed to register with Coral Server: {server_error}")
+                logger.info("Falling back to local registration only")
+
+                # Fallback to local registration
                 self.registered_agents[self.agent_id] = AgentRegistration(
                     agent_id=self.agent_id,
                     agent_type=agent_type,
@@ -82,9 +112,7 @@ class CoralClient:
                 )
                 return True
 
-            return False
-
-        except (ValueError, TypeError, ConnectionError) as e:
+        except (ValueError, TypeError) as e:
             logger.error(f"Failed to register agent: {e}")
             return False
         except Exception as e:
@@ -104,8 +132,43 @@ class CoralClient:
         try:
             await self._ensure_client()
 
-            # Real Coral Protocol discovery would go here
-            # For now, return only registered agents
+            # Try to discover agents from the Coral Protocol server
+            try:
+                params = {}
+                if agent_type:
+                    params["agent_type"] = agent_type
+
+                response = await self.client.get(
+                    f"{self.coral_server_url}/agents",
+                    params=params,
+                    timeout=10.0
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    agents_data = result.get("agents", [])
+
+                    # Convert to AgentRegistration objects
+                    agents = []
+                    for agent_data in agents_data:
+                        agents.append(AgentRegistration(
+                            agent_id=agent_data["agent_id"],
+                            agent_type=agent_data["agent_type"],
+                            capabilities=agent_data["capabilities"],
+                            endpoint=agent_data["endpoint"]
+                        ))
+
+                    logger.info(f"Discovered {len(agents)} agents from Coral Server")
+                    return agents
+
+                else:
+                    logger.warning(f"Discovery failed with status {response.status_code}")
+
+            except Exception as server_error:
+                logger.warning(f"Failed to discover agents from Coral Server: {server_error}")
+
+            # Fallback to local registered agents
+            logger.info("Falling back to local agent registry")
             registered_agents = list(self.registered_agents.values())
 
             if agent_type:
