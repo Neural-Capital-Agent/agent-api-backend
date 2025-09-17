@@ -9,6 +9,8 @@ dependencies = [
     "anyio",
     "beautifulsoup4",
     "click",
+    "crewai>=0.80.0",
+    "crewai-tools",
     "curl-cffi",
     "datetime>=5.5",
     "email-validator",
