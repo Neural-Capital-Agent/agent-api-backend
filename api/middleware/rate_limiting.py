@@ -12,7 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 import re
 
-from utils.rate_limiter import llm_rate_limiter, setup_user_tier
+from utils.rate_limiter import llm_rate_limiter, setup_user_tier, rate_limit
 
 logger = logging.getLogger(__name__)
 

@@ -146,6 +146,40 @@ async def startup():
         # Initialize agents (lazy loading will happen on first request)
         logger.info("✓ Financial agents ready for initialization")
 
+        # Initialize CrewAI
+        try:
+            from agent.crew_agents import crew_manager
+            crew_status = crew_manager.get_crew_status()
+            logger.info(f"🤖 CrewAI initialized with {crew_status['crew_size']} agents")
+            logger.info(f"🎯 CrewAI workflows available at /api/v1/crew/")
+        except Exception as crew_error:
+            logger.error(f"⚠️ CrewAI initialization failed: {crew_error}")
+            logger.info("📝 Individual agents will still function normally")
+
+        # Initialize Coral Protocol integration
+        try:
+            from agent.coral_registry import coral_registry
+            logger.info("🌊 Initializing Coral Protocol integration...")
+
+            # Register agents with Coral Server for Studio visibility
+            registration_results = await coral_registry.register_all_agents()
+            successful_registrations = sum(1 for success in registration_results.values() if success)
+            total_agents = len(registration_results)
+
+            if successful_registrations == total_agents:
+                logger.info(f"✓ All {total_agents} agents registered with Coral Server")
+            elif successful_registrations > 0:
+                logger.warning(f"⚠️ Partial success: {successful_registrations}/{total_agents} agents registered with Coral Server")
+            else:
+                logger.error(f"❌ Failed to register any agents with Coral Server")
+
+            logger.info(f"🎯 Coral Studio endpoints available at /api/v1/coral/")
+            logger.info(f"🌊 Coral Server URL: {coral_registry.coral_server_url}")
+
+        except Exception as coral_error:
+            logger.error(f"⚠️ Coral Protocol initialization failed: {coral_error}")
+            logger.info("📝 Agents will still function normally without Coral Studio integration")
+
         # Log startup completion
         logger.info("🚀 Neural Capital Financial Agents API started successfully")
         logger.info(f"📊 API Documentation: http://localhost:8000/docs")
@@ -161,6 +195,14 @@ async def shutdown():
     """Clean shutdown procedures."""
     try:
         logger.info("🔄 Shutting down Neural Capital API...")
+
+        # Close Coral Protocol connections
+        try:
+            from agent.coral_registry import coral_registry
+            await coral_registry.close()
+            logger.info("✓ Coral Protocol connections closed")
+        except Exception as coral_error:
+            logger.warning(f"⚠️ Coral shutdown warning: {coral_error}")
 
         # Close any open connections
         from agent.mistral_client import mistral_client
@@ -196,13 +238,31 @@ async def read_root():
             "planner_agent": f"{settings.API_V1_STR}/agents/planner/",
             "explainability_agent": f"{settings.API_V1_STR}/agents/explainer/"
         },
+        "crewai_workflows": {
+            "market_analysis": f"{settings.API_V1_STR}/crew/market-analysis",
+            "portfolio_advisory": f"{settings.API_V1_STR}/crew/portfolio-advisory",
+            "quick_advice": f"{settings.API_V1_STR}/crew/quick-advice",
+            "status": f"{settings.API_V1_STR}/crew/status",
+            "workflows": f"{settings.API_V1_STR}/crew/workflows",
+            "health": f"{settings.API_V1_STR}/crew/health"
+        },
+        "coral_protocol": {
+            "status": f"{settings.API_V1_STR}/coral/status",
+            "register": f"{settings.API_V1_STR}/coral/register",
+            "studio_config": f"{settings.API_V1_STR}/coral/studio-config",
+            "capabilities": f"{settings.API_V1_STR}/coral/capabilities"
+        },
         "features": [
             "Real-time market data",
             "AI-powered portfolio optimization",
             "Natural language goal parsing",
             "Financial decision explanations",
+            "CrewAI orchestrated workflows",
+            "Coral Protocol integration",
+            "Multi-agent collaboration",
             "Comprehensive rate limiting",
-            "Multi-agent workflows"
+            "LLM-powered insights",
+            "Studio-ready agent visibility"
         ]
     }
 
@@ -248,13 +308,43 @@ async def system_health():
 
         # Check agents availability (basic check)
         try:
-            from agent.agents import DataAgent
+            from agent.data_agent import DataAgent
             health_status["components"]["financial_agents"] = {
                 "status": "healthy",
                 "agents": ["data_agent", "portfolio_agent", "planner_agent", "explainability_agent"]
             }
         except Exception as e:
             health_status["components"]["financial_agents"] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+
+        # Check CrewAI system
+        try:
+            from agent.crew_agents import crew_manager
+            crew_status = crew_manager.get_crew_status()
+            health_status["components"]["crewai"] = {
+                "status": "healthy" if crew_status.get("status") == "ready" else "unhealthy",
+                "crew_size": crew_status.get("crew_size", 0),
+                "process": crew_status.get("process", "unknown")
+            }
+        except Exception as e:
+            health_status["components"]["crewai"] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+
+        # Check Coral Protocol registry
+        try:
+            from agent.coral_registry import coral_registry
+            coral_status = await coral_registry.get_agent_registry_status()
+            health_status["components"]["coral_registry"] = {
+                "status": "healthy" if coral_status.get("registry_status") != "critical" else "degraded",
+                "total_agents": coral_status.get("summary", {}).get("total_agents", 0),
+                "healthy_agents": coral_status.get("summary", {}).get("healthy_agents", 0)
+            }
+        except Exception as e:
+            health_status["components"]["coral_registry"] = {
                 "status": "unhealthy",
                 "error": str(e)
             }
@@ -355,6 +445,19 @@ async def api_info():
                 "rate_limited": True,
                 "credit_based": True
             },
+            "crewai_workflows": {
+                "market_analysis": "Multi-agent market condition analysis",
+                "portfolio_advisory": "Complete goal-to-portfolio workflow",
+                "quick_advice": "Instant financial guidance",
+                "orchestrated": True,
+                "ai_powered": True
+            },
+            "coral_protocol": {
+                "studio_integration": True,
+                "agent_visibility": True,
+                "network_discovery": True,
+                "capabilities_export": True
+            },
             "rate_limiting": {
                 "tiers": ["basic", "premium", "enterprise"],
                 "time_windows": ["daily", "hourly", "minute"],
@@ -362,10 +465,13 @@ async def api_info():
             }
         },
         "statistics": {
-            "total_endpoints": "25+",
+            "total_endpoints": "35+",
             "agents": 4,
             "data_sources": 3,
-            "llm_operations": 5
+            "llm_operations": 5,
+            "crewai_workflows": 3,
+            "coral_endpoints": 8,
+            "integration_protocols": 2
         },
         "timestamp": datetime.now().isoformat()
     }

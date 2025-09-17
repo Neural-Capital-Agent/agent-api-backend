@@ -371,3 +371,8 @@ async def setup_user_tier(user_id: str, tier: str = "basic"):
     config = USER_TIER_CONFIGS[tier]
     await llm_rate_limiter.set_user_config(user_id, config)
     return config
+
+# Convenience decorator for easy use in routes
+def rate_limit(cost: int = 1, endpoint: str = "api"):
+    """Simplified rate limit decorator for route endpoints"""
+    return rate_limit_decorator(llm_rate_limiter, endpoint=endpoint, cost=cost)
