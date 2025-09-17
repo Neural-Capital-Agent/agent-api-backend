@@ -121,12 +121,18 @@ class CoralRegistry:
 
         for config in agent_configs:
             try:
+                # Create a temporary client for this specific agent
+                from .coral_client import CoralClient
+                agent_client = CoralClient(self.coral_server_url, config.agent_id)
+
                 # Register agent with Coral Protocol
-                success = await self.coral_client.register_agent(
+                success = await agent_client.register_agent(
                     agent_type=config.agent_type,
                     capabilities=config.capabilities,
                     endpoint=config.endpoint_url
                 )
+
+                await agent_client.close()
 
                 if success:
                     self.registered_agents[config.agent_id] = config
@@ -155,13 +161,28 @@ class CoralRegistry:
         config = self.registered_agents[agent_id]
 
         try:
-            # Use coral client to check agent health
-            health = await self.coral_client.invoke_agent(
-                target_agent=agent_id,
-                method="health_check",
-                parameters={}
-            )
-            return health
+            # Use direct HTTP call to check agent health endpoint
+            import httpx
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    config.health_endpoint,
+                    timeout=5.0
+                )
+
+                if response.status_code == 200:
+                    health_data = response.json()
+                    return {
+                        "status": "healthy",
+                        "endpoint_status": health_data,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                else:
+                    return {
+                        "status": "unhealthy",
+                        "error": f"Health endpoint returned {response.status_code}",
+                        "timestamp": datetime.now().isoformat()
+                    }
+
         except Exception as e:
             logger.error(f"Health check failed for {agent_id}: {e}")
             return {
