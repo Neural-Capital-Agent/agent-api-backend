@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: neural-capital-api
+    runtime: python3
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT --workers 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: PROJECT_NAME
+        value: Neural Capital API
+      - key: DEBUG
+        value: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: URL_SUPABASE
+        sync: false
+      - key: KEY_SUPABASE
+        sync: false
+      - key: API_KEY_ALPACA
+        sync: false
+      - key: API_SECRET_ALPACA
+        sync: false
+      - key: POLYGON_API_KEY
+        sync: false
+      - key: BACKEND_CORS_ORIGINS
+        value: '["https://your-frontend-domain.com"]'
+    healthCheckPath: /health
+    plan: starter
+    autoDeploy: false
