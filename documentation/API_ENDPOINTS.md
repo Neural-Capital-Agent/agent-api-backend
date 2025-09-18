@@ -255,6 +255,128 @@ Content-Type: application/json
 4. Market context analysis (Data Agent)
 5. Plain English explanation (Explainability Agent)
 
+## 🤖 CrewAI Workflows (`/api/v1/crew/`)
+
+CrewAI provides orchestrated multi-agent workflows for complex financial analysis and advisory services.
+
+### Workflow Endpoints
+```http
+POST   /api/v1/crew/market-analysis      # Multi-agent market analysis (3 credits)
+POST   /api/v1/crew/portfolio-advisory   # Complete advisory workflow (5 credits)
+POST   /api/v1/crew/quick-advice         # Quick financial advice (2 credits)
+```
+
+### Management Endpoints
+```http
+GET    /api/v1/crew/status              # Crew system status
+GET    /api/v1/crew/workflows           # Available workflows
+GET    /api/v1/crew/health              # Crew health check
+GET    /api/v1/crew/agents              # Active agents info
+GET    /api/v1/crew/tasks               # Running tasks status
+```
+
+#### Market Analysis Workflow
+```http
+POST   /api/v1/crew/market-analysis
+Content-Type: application/json
+
+{
+  "symbols": ["SPY", "QQQ", "BND"]  # Optional, defaults to ["SPY", "QQQ", "BND"]
+}
+```
+
+**Response**:
+```json
+{
+  "workflow": "market_analysis",
+  "result": {
+    "market_overview": "Current market conditions...",
+    "individual_analysis": {
+      "SPY": { "trend": "bullish", "signals": [...] },
+      "QQQ": { "trend": "neutral", "signals": [...] }
+    },
+    "recommendations": "Based on analysis..."
+  },
+  "timestamp": "2024-01-15T10:30:00Z",
+  "symbols": ["SPY", "QQQ", "BND"]
+}
+```
+
+#### Portfolio Advisory Workflow
+```http
+POST   /api/v1/crew/portfolio-advisory
+Content-Type: application/json
+
+{
+  "goal_text": "I want to retire in 20 years with $1M",
+  "risk_level": 3  # 1=Conservative, 5=Aggressive
+}
+```
+
+**This workflow orchestrates**:
+1. Goal parsing and strategy creation
+2. Market analysis for context
+3. Portfolio optimization
+4. Risk assessment and explanation
+
+#### Quick Advice Workflow
+```http
+POST   /api/v1/crew/quick-advice
+Content-Type: application/json
+
+{
+  "question": "Should I invest in bonds right now?"
+}
+```
+
+## 🌊 Coral Protocol Integration (`/api/v1/coral/`)
+
+Coral Protocol provides agent discovery, registration, and studio integration capabilities.
+
+### Agent Registry
+```http
+GET    /api/v1/coral/status             # Coral server connection status
+POST   /api/v1/coral/register           # Register agent with Coral
+GET    /api/v1/coral/agents             # List registered agents
+GET    /api/v1/coral/agents/{agent_id}  # Get specific agent details
+DELETE /api/v1/coral/agents/{agent_id} # Unregister agent
+```
+
+### Studio Integration
+```http
+GET    /api/v1/coral/studio-config      # Studio configuration
+GET    /api/v1/coral/capabilities       # Export agent capabilities
+GET    /api/v1/coral/studio             # Studio interface (HTML)
+```
+
+#### Agent Registration
+```http
+POST   /api/v1/coral/register
+Content-Type: application/json
+
+{
+  "agent_id": "data_agent",
+  "name": "Financial Data Agent",
+  "description": "Real-time market data and analysis",
+  "capabilities": ["market_data", "technical_analysis"],
+  "endpoints": [
+    {"path": "/api/v1/agents/data/market/{ticker}", "method": "GET"},
+    {"path": "/api/v1/agents/data/technical/{ticker}", "method": "GET"}
+  ]
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "agent_id": "data_agent",
+  "coral_server_url": "http://localhost:5555",
+  "studio_url": "http://localhost:5555/studio",
+  "registered_at": "2024-01-15T10:30:00Z"
+}
+```
+
 ## 🧠 LLM Operations (`/api/v1/llm/`)
 
 ### Natural Language Processing
