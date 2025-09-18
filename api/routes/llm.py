@@ -20,9 +20,9 @@ from agent.mistral_client import (
     validate_signals_with_mistral, mistral_client
 )
 
+
 logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
-
 router = APIRouter(tags=["LLM Operations"], prefix="/llm")
 
 

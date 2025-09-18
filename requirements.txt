@@ -38,3 +38,6 @@ supabase
 typer
 uvicorn[standard]
 yfinance
+solana>=0.34.0
+solders>=0.21.0
+anchorpy>=0.20.0
