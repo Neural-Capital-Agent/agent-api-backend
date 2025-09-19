@@ -8,7 +8,7 @@ from typing import Optional
 from datetime import datetime
 import logging
 
-from agent.data_agent import DataAgent
+from agent.core.data_agent import DataAgent
 from .shared import get_user_id
 
 logger = logging.getLogger(__name__)

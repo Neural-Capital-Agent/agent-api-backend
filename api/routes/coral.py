@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 import logging
 from datetime import datetime
 
-from agent.coral_registry import coral_registry
+from agent.coral.registry import coral_registry
 from api.middleware.rate_limiting import rate_limit
 
 logger = logging.getLogger(__name__)

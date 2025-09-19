@@ -21,7 +21,7 @@ class BaseAgent:
 
     def __init__(self, coral_server_url: str = "http://localhost:5555", agent_id: str = None):
         """Initialize base agent with common setup"""
-        from .coral_client import CoralClient
+        from ..coral.client import CoralClient
 
         if agent_id is None:
             agent_id = self.__class__.__name__.lower().replace('agent', '_agent')

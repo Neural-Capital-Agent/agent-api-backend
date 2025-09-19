@@ -8,7 +8,7 @@ from typing import Dict, Any
 from datetime import datetime
 import logging
 
-from agent.planner_agent import PlannerAgent
+from agent.core.planner_agent import PlannerAgent
 from .shared import get_user_id
 
 logger = logging.getLogger(__name__)

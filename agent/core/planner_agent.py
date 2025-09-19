@@ -5,12 +5,12 @@ import logging
 import uuid
 import re
 
-from .models import (
+from ..shared.models import (
     GoalType, RiskLevel, GoalParameters, UserProfile, InvestmentStrategy,
     GlidePath, BondLadder
 )
-from .config import config
-from .shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
+from ..shared.config import config
+from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class PlannerAgent(BaseAgent):
 
     def __init__(self, coral_server_url: str = "http://localhost:5555"):
         super().__init__(coral_server_url, "planner_agent")
-        from .models import GoalType, RiskLevel
+        from ..shared.models import GoalType, RiskLevel
 
         # Load goal strategies from configuration
         self.goal_strategies = {}
@@ -44,7 +44,7 @@ class PlannerAgent(BaseAgent):
 
     async def parse_goal(self, goal_text: str):
         """Extract goal parameters from natural language text"""
-        from .models import GoalParameters
+        from ..shared.models import GoalParameters
 
         try:
             # Use LLM agent for advanced parsing via Coral Protocol
@@ -97,7 +97,7 @@ class PlannerAgent(BaseAgent):
 
     async def generate_strategy(self, goal, user_profile):
         """Generate investment strategy based on goal and user profile"""
-        from .models import InvestmentStrategy, GoalType
+        from ..shared.models import InvestmentStrategy, GoalType
 
         try:
             # Handle goal as dict or object
@@ -171,7 +171,7 @@ class PlannerAgent(BaseAgent):
 
     def build_glide_path(self, age: int, retirement_age: int = 65):
         """Calculate age-appropriate allocation glide path"""
-        from .models import GlidePath
+        from ..shared.models import GlidePath
 
         try:
             age_ranges = {}
@@ -220,7 +220,7 @@ class PlannerAgent(BaseAgent):
 
     def _extract_goal_type(self, goal_text: str, llm_response: Dict):
         """Extract goal type from text and LLM response"""
-        from .models import GoalType
+        from ..shared.models import GoalType
 
         goal_text_lower = goal_text.lower()
 
@@ -341,7 +341,7 @@ class PlannerAgent(BaseAgent):
 
     def _build_constraints(self, goal, user_profile):
         """Build investment constraints"""
-        from .models import GoalType
+        from ..shared.models import GoalType
 
         constraints = {
             "goal_type": goal.goal_type.value,
@@ -386,7 +386,7 @@ class PlannerAgent(BaseAgent):
         """Create an investment plan based on goal"""
         try:
             # Get goal strategy
-            from .models import GoalType
+            from ..shared.models import GoalType
             goal_type = GoalType[goal.get("type", "RETIREMENT")]
             strategy = self.get_goal_strategy(goal_type)
 

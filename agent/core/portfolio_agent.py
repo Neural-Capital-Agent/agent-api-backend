@@ -5,9 +5,9 @@ import logging
 import uuid
 import numpy as np
 
-from .models import RiskLevel, Portfolio, MacroSignals, MacroSignal, RebalanceAction
-from .config import config
-from .shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
+from ..shared.models import RiskLevel, Portfolio, MacroSignals, MacroSignal, RebalanceAction
+from ..shared.config import config
+from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class PortfolioAgent(BaseAgent):
 
     def __init__(self, coral_server_url: str = "http://localhost:5555"):
         super().__init__(coral_server_url, "portfolio_agent")
-        from .models import RiskLevel
+        from ..shared.models import RiskLevel
 
         # Load asset universe from configuration
         self.equity_universe = config.data_agent.EQUITY_UNIVERSE
@@ -39,7 +39,7 @@ class PortfolioAgent(BaseAgent):
 
     async def build_portfolio(self, risk_level: int, goal: str, constraints: Optional[Dict] = None):
         """Generate initial portfolio allocation based on risk level and goal"""
-        from .models import RiskLevel, Portfolio
+        from ..shared.models import RiskLevel, Portfolio
         import uuid
         import numpy as np
 
@@ -122,7 +122,7 @@ class PortfolioAgent(BaseAgent):
 
     async def calculate_rebalancing(self, current, signals=None):
         """Calculate rebalancing actions based on current portfolio and macro signals"""
-        from .models import RebalanceAction
+        from ..shared.models import RebalanceAction
         import uuid
 
         try:
@@ -187,7 +187,7 @@ class PortfolioAgent(BaseAgent):
 
     async def _get_current_macro_signals(self):
         """Get current macro signals from market data"""
-        from .models import MacroSignals, MacroSignal
+        from ..shared.models import MacroSignals, MacroSignal
 
         now = datetime.now()
         return MacroSignals(

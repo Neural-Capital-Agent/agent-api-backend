@@ -9,10 +9,10 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from dataclasses import dataclass
 
-from .data_agent import DataAgent
-from .portfolio_agent import PortfolioAgent
-from .planner_agent import PlannerAgent
-from .explainability_agent import ExplainabilityAgent
+from ..core.data_agent import DataAgent
+from ..core.portfolio_agent import PortfolioAgent
+from ..core.planner_agent import PlannerAgent
+from ..core.explainability_agent import ExplainabilityAgent
 
 logger = logging.getLogger(__name__)
 

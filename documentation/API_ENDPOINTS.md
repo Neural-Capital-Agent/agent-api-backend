@@ -1,525 +1,250 @@
-# Neural Capital Financial Agents API - Complete Endpoint Reference
+# Neural Capital API Guide
 
-This document provides a comprehensive reference for all API endpoints in the enhanced Financial Agents API.
+Quick reference for all API endpoints in your Financial Agents system.
 
-## 🚀 API Overview
+## Getting Started
 
 **Base URL**: `http://localhost:8000`
-**API Version**: `v2.0.0`
-**Documentation**: `/docs` (Swagger UI) | `/redoc` (ReDoc)
+**Documentation**: Visit `/docs` for interactive API explorer
 
-## 📊 System Endpoints
+## Basic System Endpoints
 
-### Root Information
+### Check if everything is working
 ```http
-GET /
-```
-Returns comprehensive API information including available agents, features, and endpoint links.
-
-### Health Checks
-```http
-GET /health                    # System-wide health check
-GET /rate-limit/health        # Rate limiting health
-GET /api/v1/agents/health     # All agents health
-GET /api/v1/llm/health        # LLM services health
+GET /health          # Is the system running?
+GET /info           # What can the API do?
 ```
 
-### API Information
+## Core Data Endpoints
+
+### Users
 ```http
-GET /info                     # Detailed API capabilities and statistics
+GET  /api/v1/user/           # List all users
+POST /api/v1/user/           # Create new user
+POST /api/v1/user/login      # Login user
 ```
 
-## 🏛️ Core API Endpoints
-
-### User Management (`/api/v1/user/`)
+### Stock Market Data
 ```http
-GET    /api/v1/user/          # List users
-POST   /api/v1/user/          # Create user
-POST   /api/v1/user/login     # User login
+GET /api/v1/stocks/          # Get watchlist stocks
+GET /api/v1/stocks/{symbol}  # Get specific stock (e.g., AAPL)
 ```
 
-### Stock Data (`/api/v1/stocks/`)
+### Economic Data
 ```http
-GET    /api/v1/stocks/        # Get all watchlist stocks
-GET    /api/v1/stocks/{symbol} # Get specific stock data
+GET /api/v1/economy/         # Get economic indicators (GDP, inflation, etc.)
 ```
 
-### Economic Data (`/api/v1/economy/`)
+## AI Financial Agents
+
+These are your smart financial assistants that analyze data and make recommendations.
+
+### 📊 Data Agent - Gets Market Information
+
 ```http
-GET    /api/v1/economy/       # Get macro economic indicators
+GET /api/v1/agents/data/market/{ticker}    # Get price for one stock (e.g., AAPL)
+GET /api/v1/agents/data/market            # Get data for all tracked stocks
+GET /api/v1/agents/data/macro/{indicator} # Get economic data (CPI, unemployment, etc.)
+GET /api/v1/agents/data/volatility        # Get market fear index (VIX)
 ```
 
-### Trading (`/api/v1/alpaca/`)
-```http
-# Alpaca trading endpoints (existing functionality)
-```
-
-## 🤖 Financial Agents Endpoints (`/api/v1/agents/`)
-
-### Data Agent - Market Data & Analysis
-
-#### Market Data
-```http
-GET    /api/v1/agents/data/market/{ticker}    # Single ticker data
-GET    /api/v1/agents/data/market            # All universe data
-```
-
-**Example Response**:
+**What you get back:**
 ```json
 {
   "success": true,
-  "agent": "data_agent",
   "ticker": "AAPL",
-  "data": {
-    "symbol": "AAPL",
-    "price": 175.23,
-    "previous_close": 174.50,
-    "change": 0.73,
-    "change_percent": 0.42,
-    "timestamp": "2024-01-15T10:30:00Z"
-  }
+  "price": 175.23,
+  "change": 0.73,
+  "change_percent": 0.42
 }
 ```
 
-#### Macro Economic Data
+### 💼 Portfolio Agent - Builds Investment Portfolios
+
 ```http
-GET    /api/v1/agents/data/macro/{indicator}  # FRED economic data
+POST /api/v1/agents/portfolio/build      # Create a new portfolio
+POST /api/v1/agents/portfolio/rebalance  # Adjust existing portfolio
 ```
 
-**Available Indicators**: `CPI`, `2Y_TREASURY`, `10Y_TREASURY`, `FED_FUNDS_RATE`, `UNEMPLOYMENT`, `VIX`, `PMI`, `DXY`
-
-#### Volatility & Technical Analysis
-```http
-GET    /api/v1/agents/data/volatility         # VIX and volatility indicators
-GET    /api/v1/agents/data/technical/{ticker} # Technical indicators (SMA, RSI, MACD)
-```
-
-#### Health Check
-```http
-GET    /api/v1/agents/data/health            # Data sources health
-```
-
-### Portfolio Agent - Optimization & Rebalancing
-
-#### Portfolio Building
-```http
-POST   /api/v1/agents/portfolio/build
-Content-Type: application/json
-
+**Create a portfolio:** Send your risk level (1-5) and goals
+```json
 {
   "risk_level": 3,
-  "goal": "retirement planning",
-  "constraints": {
-    "max_single_position": 0.4,
-    "exclude_crypto": false
-  }
+  "goal": "retirement planning"
 }
 ```
 
-**Response**:
+**Get back:** Recommended investments with percentages
 ```json
 {
-  "success": true,
-  "agent": "portfolio_agent",
-  "portfolio": {
-    "id": "portfolio-uuid",
-    "risk_level": 3,
-    "allocations": {
-      "SPY": 0.40,
-      "BND": 0.30,
-      "QQQ": 0.20,
-      "GLD": 0.10
-    },
-    "expected_return": 0.08,
-    "volatility": 0.12
-  }
-}
-```
-
-#### Portfolio Rebalancing
-```http
-POST   /api/v1/agents/portfolio/rebalance
-Content-Type: application/json
-
-{
-  "current_portfolio": {
-    "allocations": {"SPY": 0.6, "BND": 0.4}
+  "allocations": {
+    "SPY": 0.40,    // 40% S&P 500
+    "BND": 0.30,    // 30% Bonds
+    "QQQ": 0.20,    // 20% Tech stocks
+    "GLD": 0.10     // 10% Gold
   },
-  "signals": {
-    "yield_curve_inversion": true,
-    "volatility_spike": false
-  }
+  "expected_return": 0.08,
+  "risk": 0.12
 }
 ```
 
-### Planner Agent - Goal Parsing & Strategy
+### 🎯 Planner Agent - Understands Your Financial Goals
 
-#### Goal Parsing
 ```http
-POST   /api/v1/agents/planner/parse-goal
-Content-Type: application/json
-
-{
-  "goal_text": "I want to save $500k for retirement in 25 years. I'm 40 years old and have moderate risk tolerance."
-}
+POST /api/v1/agents/planner/parse-goal      # Turn your goal into a plan
+POST /api/v1/agents/planner/create-strategy # Create investment strategy
+POST /api/v1/agents/planner/create-plan     # Complete financial plan
 ```
 
-**Response**:
+**Tell it your goal:** In plain English
 ```json
 {
-  "success": true,
-  "agent": "planner_agent",
-  "parsed_goal": {
-    "goal_type": "RETIREMENT",
-    "time_horizon": 25,
-    "amount": 500000,
-    "current_age": 40
-  }
+  "goal_text": "I want to save $500k for retirement in 25 years. I'm 40 years old."
 }
 ```
 
-#### Strategy Generation
-```http
-POST   /api/v1/agents/planner/create-strategy
-POST   /api/v1/agents/planner/glide-path
-POST   /api/v1/agents/planner/create-plan
-```
-
-### Explainability Agent - Plain English Explanations
-
-#### Decision Explanations
-```http
-POST   /api/v1/agents/explainer/explain-decision
-Content-Type: application/json
-
+**Get back:** Structured plan
+```json
 {
-  "action": {
-    "type": "rebalancing",
-    "reason": "yield curve inversion detected"
-  },
-  "context": {
-    "market_regime": "elevated_volatility"
-  }
+  "goal_type": "RETIREMENT",
+  "time_horizon": 25,
+  "target_amount": 500000,
+  "current_age": 40
 }
 ```
 
-#### Jargon Translation
-```http
-POST   /api/v1/agents/explainer/translate-jargon
-Content-Type: application/json
+### 💬 Explainer Agent - Translates Finance Jargon
 
+```http
+POST /api/v1/agents/explainer/explain-decision            # Why did we make this choice?
+POST /api/v1/agents/explainer/translate-jargon            # Turn jargon into plain English
+GET  /api/v1/agents/explainer/jargon-definition/{term}    # What does this term mean?
+```
+
+**Example:** Turn complex finance speak into simple language
+```json
 {
-  "technical_text": "The portfolio's duration risk increased due to yield curve inversion and credit spread widening."
+  "technical_text": "Duration risk increased due to yield curve inversion"
 }
 ```
-
-#### Financial Term Definitions
-```http
-GET    /api/v1/agents/explainer/jargon-definition/{term}
-GET    /api/v1/agents/explainer/jargon-definition/duration_risk
+↓ Becomes ↓
+```
+"Bond prices may fall more than usual because interest rates are acting strangely"
 ```
 
-#### Risk Level Explanations
-```http
-POST   /api/v1/agents/explainer/risk-explanation
-Content-Type: application/json
+## Complete Workflows
 
-{
-  "risk_level": "aggressive"
-}
+### 🔄 All-in-One Financial Analysis
+```http
+POST /api/v1/agents/workflow/complete-analysis
 ```
 
-### Multi-Agent Workflows
-
-#### Complete Financial Analysis
-```http
-POST   /api/v1/agents/workflow/complete-analysis
-Content-Type: application/json
-
+**Send:** Your goal and profile
+```json
 {
-  "goal_text": "Save for house down payment of $100k in 5 years",
+  "goal_text": "Save $100k for house in 5 years",
   "user_profile": {
     "age": 28,
     "income": 75000,
-    "risk_tolerance": 2,
-    "investment_experience": "beginner"
-  },
-  "current_portfolio": null
+    "risk_tolerance": 2
+  }
 }
 ```
 
-**This workflow runs**:
-1. Goal parsing (Planner Agent)
-2. Strategy generation (Planner Agent)
-3. Portfolio building (Portfolio Agent)
-4. Market context analysis (Data Agent)
-5. Plain English explanation (Explainability Agent)
+**Get:** Complete financial plan using all 4 agents working together
 
-## 🤖 CrewAI Workflows (`/api/v1/crew/`)
+## Team Workflows (CrewAI)
 
-CrewAI provides orchestrated multi-agent workflows for complex financial analysis and advisory services.
+Multiple agents working as a team for complex analysis.
 
-### Workflow Endpoints
+### 🚀 Quick Commands
 ```http
-POST   /api/v1/crew/market-analysis      # Multi-agent market analysis (3 credits)
-POST   /api/v1/crew/portfolio-advisory   # Complete advisory workflow (5 credits)
-POST   /api/v1/crew/quick-advice         # Quick financial advice (2 credits)
+POST /api/v1/crew/market-analysis      # Analyze market trends
+POST /api/v1/crew/portfolio-advisory   # Complete investment advice
+POST /api/v1/crew/quick-advice         # Quick financial questions
 ```
 
-### Management Endpoints
+### 📋 Management
 ```http
-GET    /api/v1/crew/status              # Crew system status
-GET    /api/v1/crew/workflows           # Available workflows
-GET    /api/v1/crew/health              # Crew health check
-GET    /api/v1/crew/agents              # Active agents info
-GET    /api/v1/crew/tasks               # Running tasks status
+GET /api/v1/crew/status                # Is the team working?
+GET /api/v1/crew/health                # Team health check
 ```
 
-#### Market Analysis Workflow
-```http
-POST   /api/v1/crew/market-analysis
-Content-Type: application/json
-
-{
-  "symbols": ["SPY", "QQQ", "BND"]  # Optional, defaults to ["SPY", "QQQ", "BND"]
-}
-```
-
-**Response**:
+**Example - Get Market Analysis:**
 ```json
 {
-  "workflow": "market_analysis",
-  "result": {
-    "market_overview": "Current market conditions...",
-    "individual_analysis": {
-      "SPY": { "trend": "bullish", "signals": [...] },
-      "QQQ": { "trend": "neutral", "signals": [...] }
-    },
-    "recommendations": "Based on analysis..."
-  },
-  "timestamp": "2024-01-15T10:30:00Z",
   "symbols": ["SPY", "QQQ", "BND"]
 }
 ```
 
-#### Portfolio Advisory Workflow
-```http
-POST   /api/v1/crew/portfolio-advisory
-Content-Type: application/json
+**Get back:** Professional market report from the team
 
-{
-  "goal_text": "I want to retire in 20 years with $1M",
-  "risk_level": 3  # 1=Conservative, 5=Aggressive
-}
+## Advanced Features
+
+### 🌊 Coral Protocol - Agent Network
+```http
+GET  /api/v1/coral/status               # Connection status
+POST /api/v1/coral/register             # Join the network
+GET  /api/v1/coral/agents               # See other agents
+GET  /api/v1/coral/studio               # Visual interface
 ```
 
-**This workflow orchestrates**:
-1. Goal parsing and strategy creation
-2. Market analysis for context
-3. Portfolio optimization
-4. Risk assessment and explanation
-
-#### Quick Advice Workflow
+### 🧠 Direct LLM Access
 ```http
-POST   /api/v1/crew/quick-advice
-Content-Type: application/json
-
-{
-  "question": "Should I invest in bonds right now?"
-}
+POST /api/v1/llm/parse-goal             # Parse goals directly
+POST /api/v1/llm/explain-decision       # Get explanations
+POST /api/v1/llm/create-plan            # Generate plans
 ```
 
-## 🌊 Coral Protocol Integration (`/api/v1/coral/`)
+## Rate Limits & Authentication
 
-Coral Protocol provides agent discovery, registration, and studio integration capabilities.
-
-### Agent Registry
+### 🔐 How to Connect
+Add this header to your requests:
 ```http
-GET    /api/v1/coral/status             # Coral server connection status
-POST   /api/v1/coral/register           # Register agent with Coral
-GET    /api/v1/coral/agents             # List registered agents
-GET    /api/v1/coral/agents/{agent_id}  # Get specific agent details
-DELETE /api/v1/coral/agents/{agent_id} # Unregister agent
+Authorization: Bearer your-jwt-token
 ```
 
-### Studio Integration
-```http
-GET    /api/v1/coral/studio-config      # Studio configuration
-GET    /api/v1/coral/capabilities       # Export agent capabilities
-GET    /api/v1/coral/studio             # Studio interface (HTML)
-```
+### 🚦 Usage Limits
+| Plan | Daily Requests | AI Credits |
+|------|---------------|------------|
+| Basic | 50 | 100 |
+| Premium | 200 | 500 |
+| Enterprise | 1000 | 2000 |
 
-#### Agent Registration
-```http
-POST   /api/v1/coral/register
-Content-Type: application/json
-
-{
-  "agent_id": "data_agent",
-  "name": "Financial Data Agent",
-  "description": "Real-time market data and analysis",
-  "capabilities": ["market_data", "technical_analysis"],
-  "endpoints": [
-    {"path": "/api/v1/agents/data/market/{ticker}", "method": "GET"},
-    {"path": "/api/v1/agents/data/technical/{ticker}", "method": "GET"}
-  ]
-}
-```
-
-**Response**:
+### ✅ Success Response
 ```json
 {
   "success": true,
-  "agent_id": "data_agent",
-  "coral_server_url": "http://localhost:5555",
-  "studio_url": "http://localhost:5555/studio",
-  "registered_at": "2024-01-15T10:30:00Z"
+  "data": { your_results_here }
 }
 ```
 
-## 🧠 LLM Operations (`/api/v1/llm/`)
-
-### Natural Language Processing
-```http
-POST   /api/v1/llm/parse-goal           # Parse financial goals (1 credit)
-POST   /api/v1/llm/explain-decision     # Explain decisions (2 credits)
-POST   /api/v1/llm/create-plan          # Investment planning (3 credits)
-POST   /api/v1/llm/translate-jargon     # Jargon translation (1 credit)
-POST   /api/v1/llm/validate-signals     # Market signal validation (2 credits)
-```
-
-### Rate Limit Management
-```http
-GET    /api/v1/llm/usage/{user_id}      # User usage statistics
-POST   /api/v1/llm/set-tier             # Update user tier (admin)
-POST   /api/v1/llm/add-credits          # Add credits (admin)
-POST   /api/v1/llm/reset-limits/{user_id} # Reset limits (admin)
-GET    /api/v1/llm/tiers               # Available tiers
-GET    /api/v1/llm/analytics/{user_id}  # Usage analytics
-```
-
-## 📋 Request/Response Patterns
-
-### Standard Success Response
-```json
-{
-  "success": true,
-  "agent": "agent_name",
-  "data": { ... },
-  "user_id": "user123",
-  "timestamp": "2024-01-15T10:30:00Z"
-}
-```
-
-### Error Response
-```json
-{
-  "error": {
-    "code": 500,
-    "message": "Detailed error message",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/v1/agents/data/market/INVALID",
-    "method": "GET"
-  }
-}
-```
-
-### Rate Limit Response (429)
+### ❌ Error Response
 ```json
 {
   "error": "rate_limit_exceeded",
-  "message": "Too many requests. Please try again later.",
-  "retry_after_seconds": 60,
-  "current_usage": {
-    "daily": 50,
-    "hourly": 10,
-    "minute": 3,
-    "credits": 0
-  },
-  "limits": {
-    "daily": 50,
-    "hourly": 10,
-    "minute": 3,
-    "tier": "basic"
-  }
+  "message": "Too many requests. Try again in 60 seconds."
 }
 ```
 
-## 🔒 Authentication & Rate Limiting
+## Quick Example
 
-### Authentication
-```http
-Authorization: Bearer <jwt_token>
-```
+**Goal:** Get Apple stock price and build a retirement portfolio
 
-### Rate Limiting Headers
-```http
-X-RateLimit-Limit: 3
-X-RateLimit-Remaining: 2
-X-RateLimit-Reset: 1672531200
-X-LLM-Credits: 75
-X-User-Tier: basic
-```
-
-### User Tiers
-
-| Tier | Daily | Hourly | Per Minute | LLM Credits |
-|------|-------|--------|------------|-------------|
-| Basic | 50 | 10 | 3 | 100 |
-| Premium | 200 | 50 | 10 | 500 |
-| Enterprise | 1000 | 200 | 50 | 2000 |
-
-## 📈 Usage Examples
-
-### Complete Workflow Example
-
-1. **Parse Goal**:
 ```bash
-curl -X POST "http://localhost:8000/api/v1/agents/planner/parse-goal" \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"goal_text": "Save $100k for house in 5 years"}'
-```
+# 1. Get Apple stock data
+curl "http://localhost:8000/api/v1/agents/data/market/AAPL"
 
-2. **Build Portfolio**:
-```bash
+# 2. Build retirement portfolio
 curl -X POST "http://localhost:8000/api/v1/agents/portfolio/build" \
-  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"risk_level": 3, "goal": "house_down_payment"}'
+  -d '{"risk_level": 3, "goal": "retirement"}'
 ```
 
-3. **Get Market Context**:
-```bash
-curl "http://localhost:8000/api/v1/agents/data/market" \
-  -H "Authorization: Bearer <token>"
-```
+## Need Help?
 
-4. **Explain Decision**:
-```bash
-curl -X POST "http://localhost:8000/api/v1/agents/explainer/explain-decision" \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"action": {"type": "portfolio_creation"}, "context": {}}'
-```
+- **Interactive Docs**: Visit `/docs` for a playground
+- **System Status**: Check `/health`
+- **Full API Info**: Visit `/info`
 
-## 🔍 Error Codes
-
-| Code | Description |
-|------|-------------|
-| 200 | Success |
-| 400 | Bad Request - Invalid parameters |
-| 401 | Unauthorized - Invalid token |
-| 403 | Forbidden - Insufficient permissions |
-| 429 | Too Many Requests - Rate limit exceeded |
-| 500 | Internal Server Error - System error |
-| 503 | Service Unavailable - External service down |
-
-## 📞 Support
-
-- **Documentation**: `/docs` or `/redoc`
-- **Health Checks**: `/health`, `/rate-limit/health`
-- **Support Email**: api-support@neural-capital.com
-- **API Info**: `/info` endpoint
-
-The API provides comprehensive financial agent capabilities with proper rate limiting, error handling, and extensive documentation through auto-generated OpenAPI specifications.
+That's it! Your Neural Capital AI agents are ready to help with financial decisions. 🚀
