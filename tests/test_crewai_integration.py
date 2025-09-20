@@ -25,7 +25,7 @@ async def test_crewai_integration():
         # Test 1: Import CrewAI components
         print("\n1. Testing CrewAI Import...")
         try:
-            from agent.crew_agents import crew_manager, create_financial_crew
+            from agent.crew.simple_crew import crew_manager, simple_orchestrator
             print("   SUCCESS: CrewAI components imported")
         except ImportError as e:
             print(f"   ERROR: CrewAI import failed: {e}")
@@ -35,10 +35,10 @@ async def test_crewai_integration():
         # Test 2: Initialize crew
         print("\n2. Testing Crew Initialization...")
         try:
-            crew = create_financial_crew()
-            print(f"   SUCCESS: Crew created with {len(crew.agents)} agents")
-            for i, agent in enumerate(crew.agents):
-                print(f"     Agent {i+1}: {agent.role}")
+            orchestrator = simple_orchestrator
+            print(f"   SUCCESS: Orchestrator initialized with {len(orchestrator.agents)} agents")
+            for i, (agent_type, agent) in enumerate(orchestrator.agents.items()):
+                print(f"     Agent {i+1}: {agent_type}")
         except Exception as e:
             print(f"   ERROR: Crew initialization failed: {e}")
             return False
@@ -97,7 +97,6 @@ async def test_crewai_integration():
         print(f"\nERROR: Test failed with error: {e}")
         return False
 
-
 async def test_api_endpoints():
     """Test if API endpoints are working (requires server to be running)"""
     print("\nTesting API Endpoints...")
@@ -129,7 +128,6 @@ async def test_api_endpoints():
         print(f"   WARNING: API testing failed: {e}")
         print("   NOTE: Start your API server with: python app.py")
 
-
 def show_usage_examples():
     """Show usage examples for CrewAI workflows"""
     print("\nCrewAI Usage Examples:")
@@ -154,7 +152,6 @@ def show_usage_examples():
         print(f"\n{name}:")
         print(f"  Description: {example['description']}")
         print(f"  Command: {example['curl']}")
-
 
 async def main():
     """Main test function"""
@@ -181,7 +178,6 @@ async def main():
     else:
         print("\nERROR: Some tests failed. Check the output above.")
         return 1
-
 
 if __name__ == "__main__":
     exit_code = asyncio.run(main())
