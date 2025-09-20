@@ -12,6 +12,28 @@ from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe
 logger = logging.getLogger(__name__)
 
 
+def limit_words(text: str, word_limit: int = 60) -> str:
+    """
+    Limit text to specified number of words.
+
+    Args:
+        text: Input text to limit
+        word_limit: Maximum number of words (default: 60)
+
+    Returns:
+        Text limited to word_limit words
+    """
+    if not text or not isinstance(text, str):
+        return text
+
+    words = text.split()
+    if len(words) <= word_limit:
+        return text
+
+    limited_text = ' '.join(words[:word_limit])
+    return limited_text + "..."
+
+
 class ExplainabilityAgent(BaseAgent):
     """
     Explainability Agent responsible for financial jargon translation
@@ -24,6 +46,16 @@ class ExplainabilityAgent(BaseAgent):
         # Load configuration instead of hardcoded dictionaries
         self.jargon_dictionary = config.explainability_agent.JARGON_DICTIONARY
         self.risk_templates = config.explainability_agent.RISK_TEMPLATES
+        self.default_word_limit = 60  # Default word limit for responses
+
+    def set_word_limit(self, word_limit: int):
+        """
+        Set custom word limit for responses.
+
+        Args:
+            word_limit: Maximum number of words for responses
+        """
+        self.default_word_limit = max(1, word_limit)  # Ensure minimum of 1 word
 
     async def explain_decision(self, action, context=None):
         """Generate comprehensive explanation for a decision"""
@@ -61,7 +93,7 @@ class ExplainabilityAgent(BaseAgent):
             logger.info(f"Generated explanation for action {action_id}")
             # Convert to dict for API compatibility
             return {
-                "summary": response.explanation,
+                "summary": limit_words(response.explanation, self.default_word_limit),
                 "risk_assessment": {"level": "moderate"},  # Simplified risk assessment
                 "confidence_score": response.confidence_score,
                 "verification_hash": response.verification_hash
@@ -86,7 +118,8 @@ class ExplainabilityAgent(BaseAgent):
                 "translate_jargon"
             )
             if llm_response and llm_response.get("translation") and not llm_response.get("error"):
-                return {"translation": llm_response["translation"]}
+                limited_translation = limit_words(llm_response["translation"], self.default_word_limit)
+                return {"translation": limited_translation}
 
             # Fallback to dictionary-based translation
             import re
@@ -96,7 +129,8 @@ class ExplainabilityAgent(BaseAgent):
                 pattern = re.compile(re.escape(term), re.IGNORECASE)
                 translated_text = pattern.sub(f"{explanation}", translated_text)
 
-            return {"translation": translated_text}
+            limited_translation = limit_words(translated_text, self.default_word_limit)
+            return {"translation": limited_translation}
 
         except (ValueError, TypeError, AttributeError) as e:
             logger.error(f"Error translating jargon: {e}")
@@ -346,7 +380,8 @@ class ExplainabilityAgent(BaseAgent):
                 market_explanation = self._explain_market_regime(market_regime)
                 narrative_parts.append(f"Current market conditions show {market_explanation.lower()}")
 
-            return " ".join(narrative_parts)
+            narrative = " ".join(narrative_parts)
+            return limit_words(narrative, self.default_word_limit)
 
         except Exception as e:
             logger.error(f"Error generating decision narrative: {e}")
@@ -368,36 +403,36 @@ class ExplainabilityAgent(BaseAgent):
             # Total return explanation
             total_return = performance_data.get("total_return", 0)
             if total_return > 0.1:
-                explanations["total_return"] = f"Your portfolio gained {total_return:.1%} over the period, which is strong performance."
+                explanations["total_return"] = limit_words(f"Your portfolio gained {total_return:.1%} over the period, which is strong performance.", self.default_word_limit)
             elif total_return > 0.05:
-                explanations["total_return"] = f"Your portfolio gained {total_return:.1%}, which is solid performance."
+                explanations["total_return"] = limit_words(f"Your portfolio gained {total_return:.1%}, which is solid performance.", self.default_word_limit)
             else:
-                explanations["total_return"] = f"Your portfolio returned {total_return:.1%}. While modest, this is within expectations given market conditions."
+                explanations["total_return"] = limit_words(f"Your portfolio returned {total_return:.1%}. While modest, this is within expectations given market conditions.", self.default_word_limit)
 
             # Volatility explanation
             volatility = performance_data.get("volatility", 0)
             if volatility > 0.2:
-                explanations["volatility"] = "Your portfolio experienced high ups and downs, typical of growth-focused investments."
+                explanations["volatility"] = limit_words("Your portfolio experienced high ups and downs, typical of growth-focused investments.", self.default_word_limit)
             elif volatility > 0.1:
-                explanations["volatility"] = "Your portfolio had moderate ups and downs, which is normal for balanced investments."
+                explanations["volatility"] = limit_words("Your portfolio had moderate ups and downs, which is normal for balanced investments.", self.default_word_limit)
             else:
-                explanations["volatility"] = "Your portfolio was relatively stable with minimal ups and downs."
+                explanations["volatility"] = limit_words("Your portfolio was relatively stable with minimal ups and downs.", self.default_word_limit)
 
             # Sharpe ratio explanation
             sharpe_ratio = performance_data.get("sharpe_ratio", 0)
             if sharpe_ratio > 1.0:
-                explanations["sharpe_ratio"] = "Your portfolio provided excellent returns relative to the risk taken."
+                explanations["sharpe_ratio"] = limit_words("Your portfolio provided excellent returns relative to the risk taken.", self.default_word_limit)
             elif sharpe_ratio > 0.5:
-                explanations["sharpe_ratio"] = "Your portfolio provided good returns for the level of risk."
+                explanations["sharpe_ratio"] = limit_words("Your portfolio provided good returns for the level of risk.", self.default_word_limit)
             else:
-                explanations["sharpe_ratio"] = "Your portfolio's returns could be improved relative to the risk level."
+                explanations["sharpe_ratio"] = limit_words("Your portfolio's returns could be improved relative to the risk level.", self.default_word_limit)
 
             # Max drawdown explanation
             max_drawdown = performance_data.get("max_drawdown", 0)
             if max_drawdown > 0.2:
-                explanations["max_drawdown"] = f"At its worst point, your portfolio was down {max_drawdown:.1%} from its peak."
+                explanations["max_drawdown"] = limit_words(f"At its worst point, your portfolio was down {max_drawdown:.1%} from its peak.", self.default_word_limit)
             else:
-                explanations["max_drawdown"] = f"Your portfolio's largest decline was {max_drawdown:.1%}, showing good downside protection."
+                explanations["max_drawdown"] = limit_words(f"Your portfolio's largest decline was {max_drawdown:.1%}, showing good downside protection.", self.default_word_limit)
 
             return explanations
 
