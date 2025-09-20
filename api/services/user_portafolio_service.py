@@ -146,7 +146,7 @@ def validate_user_preferences(preferences: Dict[str, Any]) -> Dict[str, Any]:
     
     return validated
 
-def set_user_preferences(preferences_data: Dict[str, Any]) -> Optional[str]:
+def set_user_preferences(preferences_data: Dict[str, Any], user_id: str) -> Optional[str]:
     """
     Stores user investment preferences in the database
     """
@@ -158,7 +158,7 @@ def set_user_preferences(preferences_data: Dict[str, Any]) -> Optional[str]:
     # Convert data format to match the database schema
     preferences_db_data = {
         "preferences_id": preferences_id,
-        "user_id": validated_data.get("user_id"),
+        "user_id": user_id,
         "primary_goal": validated_data.get("primary_goal"),
         "investment_horizon": validated_data.get("investment_horizon"),
         "experience_level": validated_data.get("experience_level"),
@@ -199,7 +199,7 @@ def set_up_portfolio_from_preferences(preferences_data: Dict[str, Any], user_id:
     Creates a complete user portfolio setup from the preferences form data
     """
     # Step 1: Store user preferences
-    preferences_id = set_user_preferences(preferences_data)
+    preferences_id = set_user_preferences(preferences_data,user_id)
     if not preferences_id:
         raise Exception("Failed to store user preferences")
     

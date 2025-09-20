@@ -39,3 +39,10 @@ async def get_user_goals(user_id: str):
             return False
     except Exception as e:
         return {"error": str(e)}
+
+@router.get("/{user_id}")
+async def get_user(user_id: str):
+    try:
+        return user_service.get_user_by_id(user_id)
+    except Exception as e:
+        return {"error": str(e)}
