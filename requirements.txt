@@ -8,6 +8,7 @@ curl-cffi
 datetime>=5.5
 email-validator
 fastapi
+# schedule>=1.2.0  # Removed - using manual refresh only
 fastapi-cache2
 httpx
 httpx-sse

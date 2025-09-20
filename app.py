@@ -21,6 +21,8 @@ from api.api import api_router
 from api.middleware.rate_limiting import RateLimitMiddleware, LLMUsageMiddleware
 from core.config import settings
 
+# Scheduler removed per user request
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -150,6 +152,9 @@ async def startup():
 
         # Initialize agents (lazy loading will happen on first request)
         logger.info("[OK] Financial agents ready for initialization")
+
+        # Dashboard scheduler removed - data updates via manual refresh only
+        logger.info("[NOTE] Dashboard data updates via manual refresh button")
 
         # Start Coral Protocol Server in background
         try:
