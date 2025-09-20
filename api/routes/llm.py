@@ -14,7 +14,7 @@ from api.schemas.user import (
     RateLimitStatus, UserLLMAnalytics, LLMUsageStats
 )
 from utils.rate_limiter import llm_rate_limiter, setup_user_tier, USER_TIER_CONFIGS
-from agent.mistral_client import (
+from agent.clients.mistral_client import (
     parse_goal_with_mistral, explain_decision_with_mistral,
     create_plan_with_mistral, translate_jargon_with_mistral,
     validate_signals_with_mistral, mistral_client

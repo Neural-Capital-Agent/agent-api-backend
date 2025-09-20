@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 import logging
 
-from agent.explainability_agent import ExplainabilityAgent
+from agent.core.explainability_agent import ExplainabilityAgent
 from .shared import get_user_id
 
 logger = logging.getLogger(__name__)
@@ -20,12 +20,14 @@ explainer_agent = ExplainabilityAgent()
 
 @router.post("/explain-decision")
 async def explain_decision(
-    action: Dict[str, Any] = Body(..., description="Action or decision to explain"),
-    context: Optional[Dict[str, Any]] = Body(None, description="Additional context"),
+    request: Dict[str, Any] = Body(..., description="Request containing action and context"),
     user_id: str = Depends(get_user_id)
 ):
     """Generate comprehensive explanation for a financial decision."""
     try:
+        action = request.get("action")
+        context = request.get("context")
+        logger.info(f"Received explain_decision request - action: {action}, context: {context}")
         explanation = await explainer_agent.explain_decision(action, context)
 
         return {

@@ -8,10 +8,10 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 import logging
 
-from agent.data_agent import DataAgent
-from agent.portfolio_agent import PortfolioAgent
-from agent.planner_agent import PlannerAgent
-from agent.explainability_agent import ExplainabilityAgent
+from agent.core.data_agent import DataAgent
+from agent.core.portfolio_agent import PortfolioAgent
+from agent.core.planner_agent import PlannerAgent
+from agent.core.explainability_agent import ExplainabilityAgent
 from .shared import get_user_id
 
 logger = logging.getLogger(__name__)

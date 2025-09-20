@@ -7,13 +7,13 @@ from datetime import datetime
 import hashlib
 
 try:
-    from .models import CoralMessage, CoralResponse, AgentRegistration
-    from .mistral_client import mistral_client
+    from ..shared.models import CoralMessage, CoralResponse, AgentRegistration
+    from ..clients.mistral_client import mistral_client
 except ImportError:
     # For testing when running directly
-    from models import CoralMessage, CoralResponse, AgentRegistration
+    from agent.shared.models import CoralMessage, CoralResponse, AgentRegistration
     try:
-        from mistral_client import mistral_client
+        from agent.clients.mistral_client import mistral_client
     except ImportError:
         logger.warning("Mistral client not available")
         mistral_client = None
@@ -85,7 +85,7 @@ class CoralClient:
 
                 if response.status_code == 200:
                     result = response.json()
-                    logger.info(f"✓ Successfully registered {self.agent_id} with Coral Server")
+                    logger.info(f"[OK] Successfully registered {self.agent_id} with Coral Server")
 
                     # Store in local registry too
                     self.registered_agents[self.agent_id] = AgentRegistration(

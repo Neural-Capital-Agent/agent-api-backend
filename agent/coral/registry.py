@@ -9,11 +9,11 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime
 
-from .coral_client import CoralClient
-from .data_agent import DataAgent
-from .portfolio_agent import PortfolioAgent
-from .planner_agent import PlannerAgent
-from .explainability_agent import ExplainabilityAgent
+from .client import CoralClient
+from ..core.data_agent import DataAgent
+from ..core.portfolio_agent import PortfolioAgent
+from ..core.planner_agent import PlannerAgent
+from ..core.explainability_agent import ExplainabilityAgent
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class CoralRegistry:
         for config in agent_configs:
             try:
                 # Create a temporary client for this specific agent
-                from .coral_client import CoralClient
+                from .client import CoralClient
                 agent_client = CoralClient(self.coral_server_url, config.agent_id)
 
                 # Register agent with Coral Protocol
@@ -136,14 +136,14 @@ class CoralRegistry:
 
                 if success:
                     self.registered_agents[config.agent_id] = config
-                    logger.info(f"✓ Successfully registered {config.agent_id} ({config.agent_type})")
+                    logger.info(f"[OK] Successfully registered {config.agent_id} ({config.agent_type})")
                 else:
-                    logger.error(f"✗ Failed to register {config.agent_id}")
+                    logger.error(f"[ERROR] Failed to register {config.agent_id}")
 
                 results[config.agent_id] = success
 
             except Exception as e:
-                logger.error(f"✗ Error registering {config.agent_id}: {e}")
+                logger.error(f"[ERROR] Error registering {config.agent_id}: {e}")
                 results[config.agent_id] = False
 
         # Log summary
@@ -254,7 +254,7 @@ class CoralRegistry:
             # In a full implementation, this would call Coral Server to unregister
             # For now, just remove from local registry
             del self.registered_agents[agent_id]
-            logger.info(f"✓ Unregistered {agent_id} from coral registry")
+            logger.info(f"[OK] Unregistered {agent_id} from coral registry")
             return True
         except Exception as e:
             logger.error(f"Failed to unregister {agent_id}: {e}")

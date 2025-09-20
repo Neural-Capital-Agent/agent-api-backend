@@ -91,10 +91,10 @@ class CoralServer:
                 registration.timestamp = datetime.now().isoformat()
                 self.registered_agents[registration.agent_id] = registration
 
-                logger.info(f"🔌 AGENT REGISTERED: {registration.agent_id} ({registration.agent_type})")
-                logger.info(f"   📍 Endpoint: {registration.endpoint}")
-                logger.info(f"   🛠️  Capabilities: {', '.join(registration.capabilities)}")
-                logger.info(f"   ⏰ Timestamp: {registration.timestamp}")
+                logger.info(f"[CONNECTED] AGENT REGISTERED: {registration.agent_id} ({registration.agent_type})")
+                logger.info(f"   [TARGET] Endpoint: {registration.endpoint}")
+                logger.info(f"   [FEATURES] Capabilities: {', '.join(registration.capabilities)}")
+                logger.info(f"   [TIME] Timestamp: {registration.timestamp}")
 
                 return {
                     "success": True,
@@ -103,7 +103,7 @@ class CoralServer:
                     "timestamp": registration.timestamp
                 }
             except Exception as e:
-                logger.error(f"❌ Failed to register agent: {e}")
+                logger.error(f"[ERROR] Failed to register agent: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.app.delete("/register/{agent_id}")
@@ -172,9 +172,9 @@ class CoralServer:
                 if target_agent_id not in self.registered_agents:
                     raise HTTPException(status_code=404, detail=f"Target agent {target_agent_id} not found")
 
-                logger.info(f"🚀 AGENT INVOCATION: {message.agent_id} → {target_agent_id}")
-                logger.info(f"   🎯 Method: {message.method}")
-                logger.info(f"   📦 Parameters: {message.parameters}")
+                logger.info(f"[STARTING] AGENT INVOCATION: {message.agent_id} -> {target_agent_id}")
+                logger.info(f"   [TARGET] Method: {message.method}")
+                logger.info(f"   [DATA] Parameters: {message.parameters}")
 
                 target_agent = self.registered_agents[target_agent_id]
 
@@ -197,7 +197,7 @@ class CoralServer:
 
                         if response.status_code == 200:
                             result = response.json()
-                            logger.info(f"✅ INVOCATION SUCCESS: {target_agent_id} responded")
+                            logger.info(f"[SUCCESS] INVOCATION SUCCESS: {target_agent_id} responded")
                             return {
                                 "success": True,
                                 "result": result,
@@ -209,7 +209,7 @@ class CoralServer:
                                 }
                             }
                         else:
-                            logger.warning(f"⚠️ INVOCATION WARNING: {target_agent_id} returned {response.status_code}")
+                            logger.warning(f"[WARNING] INVOCATION WARNING: {target_agent_id} returned {response.status_code}")
                             return {
                                 "success": False,
                                 "error": f"Agent returned status {response.status_code}",
@@ -217,7 +217,7 @@ class CoralServer:
                             }
 
                     except Exception as invoke_error:
-                        logger.error(f"❌ INVOCATION FAILED: {target_agent_id} - {invoke_error}")
+                        logger.error(f"[ERROR] INVOCATION FAILED: {target_agent_id} - {invoke_error}")
                         # Fallback to mock response for development
                         return {
                             "success": True,
@@ -235,7 +235,7 @@ class CoralServer:
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"❌ Failed to invoke agent: {e}")
+                logger.error(f"[ERROR] Failed to invoke agent: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.app.get("/status")

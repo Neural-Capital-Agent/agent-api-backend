@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 import logging
 
-from agent.portfolio_agent import PortfolioAgent
+from agent.core.portfolio_agent import PortfolioAgent
 from .shared import get_user_id
 
 logger = logging.getLogger(__name__)

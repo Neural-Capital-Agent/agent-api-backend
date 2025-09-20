@@ -9,11 +9,7 @@ This script demonstrates a complete user journey through all 4 financial agents:
 DATA FLOW:
 - Step 1 collects data and saves to temp_storage/ using json_read_write()
 - Step 2 loads data from temp_storage/ using json_read_write()
-- json_read_write() utility handles both reading and w           print("   Data Flow: Step 1 → json_read_write() → temp_storage/ → json_read_write() → Step 2")
-        print("   Persistence: Data saved/loaded using json_read_write() utility function")     print("   Data Flow: Step 1 → json_read_write() → temp_storage/ → json_read_write() → Step 2")
-        print("   Persistence: Data saved/loaded using json_read_write() utility function")     print("   Data Flow: Step 1 → json_read_write() → temp_storage/ → json_read_write() → Step 2")
-        print("   Persistence: Data saved/loaded using json_read_write() utility function")     print("   Data Flow: Step 1 → json_read_write() → temp_storage/ → json_read_write() → Step 2")
-        print("   Persistence: Data saved/loaded using json_read_write() utility function")ting JSON files
+- json_read_write() utility handles both reading and writing JSON files
 
 UTILITY FUNCTIONS:
 - json_read_write(file_location, mode, data): Read/write JSON files
@@ -71,7 +67,11 @@ def json_read_write(file_location: str, mode: str, data: Any = None) -> Any:
         else:
             raise
     except json.JSONDecodeError as e:
-        raise json.JSONDecodeError(f"Invalid JSON in file {file_location}: {e}")
+        raise json.JSONDecodeError(
+            f"Invalid JSON in file {file_location}: {e.msg}",
+            e.doc,
+            e.pos
+        )
     except Exception as e:
         raise Exception(f"Error {'reading' if mode == 'r' else 'writing'} file {file_location}: {e}")
 
@@ -509,6 +509,7 @@ async def step_4_explanations(portfolio_result, goal_result):
     }
 
     explanation_result = await make_request("POST", "/agents/explainer/explain-decision", explanation_request, delay=1.0)
+    print(f"   DEBUG - Raw explanation API response: {explanation_result}")
 
     if "error" not in explanation_result:
         print("Decision explained successfully")
@@ -530,6 +531,7 @@ async def step_4_explanations(portfolio_result, goal_result):
     for i, term_question in enumerate(jargon_terms):
         # The endpoint expects just a string body
         translation_result = await make_request("POST", "/agents/explainer/translate-jargon", term_question, delay=1.0)
+        print(f"   DEBUG - Raw translation API response for '{term_question}': {translation_result}")
 
         if "error" not in translation_result:
             term_name = term_question.split()[2] if len(term_question.split()) > 2 else f"Term {i+1}"
@@ -570,22 +572,22 @@ async def main():
     print("Rate limiting disabled for testing - proceeding with demo")
 
     try:
-        # # Step 1: Data Collection & Validation [AGENT 1 - DATA AGENT]
-        # # ============================================================
-        # print("\nStarting Step 1: Data Collection")
-        # market_data, macro_data, validation_result = await step_1_data_collection()
-        
-        # # Save Step 1 results to temp_storage
-        # print("\nSaving Step 1 results to temp_storage/...")
-        # json_read_write("temp_storage/market_data.json", "w", market_data)
-        # json_read_write("temp_storage/macro_data.json", "w", macro_data)
-        # json_read_write("temp_storage/validation_result.json", "w", validation_result)
-        # print("Data saved successfully!")
-        # print("   temp_storage/market_data.json")
-        # print("   temp_storage/macro_data.json")
-        # print("   temp_storage/validation_result.json")
+        # Step 1: Data Collection & Validation [AGENT 1 - DATA AGENT]
+        # ============================================================
+        print("\nStarting Step 1: Data Collection")
+        market_data, macro_data, validation_result = await step_1_data_collection()
 
-        
+        # Save Step 1 results to temp_storage
+        print("\nSaving Step 1 results to temp_storage/...")
+        json_read_write("temp_storage/market_data.json", "w", market_data)
+        json_read_write("temp_storage/macro_data.json", "w", macro_data)
+        json_read_write("temp_storage/validation_result.json", "w", validation_result)
+        print("Data saved successfully!")
+        print("   temp_storage/market_data.json")
+        print("   temp_storage/macro_data.json")
+        print("   temp_storage/validation_result.json")
+
+
         # Step 2: Portfolio Optimization (load data from temp_storage) [AGENT 2 - PORTFOLIO AGENT]
         # ============================================================
         print("\nLoading data from temp_storage/ for Step 2...")
@@ -617,13 +619,22 @@ async def main():
         portfolio_data = portfolio_result.get('portfolio', {}).get('portfolio', {})
         allocations = portfolio_data.get('allocations', {})
         print(f"   Portfolio Agent: Built portfolio with {len(allocations)} assets")
-        print("    Data Flow: Step 1 → json_read_write() → temp_storage/ → json_read_write() → Step 2")
+        print("    Data Flow: Step 1 -> json_read_write() -> temp_storage/ -> json_read_write() -> Step 2")
         print("    Persistence: Data saved/loaded using json_read_write() utility function")
-        # print(f"   Planner Agent: Parsed goal '{goal_result.get('parsed_goal', {}).get('goal_type', 'unknown')}'")
-        # print(f"   Explainability Agent: Provided {len(explanation_result.get('explanation', {}))} explanation components")
-        
-        # print("\nAll agents successfully demonstrated their capabilities!")
-        # print("Check the server logs for detailed agent interactions.")
+
+        # Handle nested goal parsing structure safely
+        goal_data = goal_result.get('parsed_goal', {})
+        if isinstance(goal_data, dict) and 'parsed_goal' in goal_data:
+            goal_type = goal_data.get('parsed_goal', {}).get('goal_type', 'unknown')
+        else:
+            goal_type = goal_data.get('goal_type', 'unknown')
+        print(f"   Planner Agent: Parsed goal '{goal_type}'")
+
+        explanation_components = len(explanation_result.get('explanation', {})) if explanation_result.get('explanation') else 0
+        print(f"   Explainability Agent: Provided {explanation_components} explanation components")
+
+        print("\nAll agents successfully demonstrated their capabilities!")
+        print("Check the server logs for detailed agent interactions.")
 
     except KeyboardInterrupt:
         print("\nDemo interrupted by user")

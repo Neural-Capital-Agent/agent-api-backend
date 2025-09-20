@@ -116,7 +116,7 @@ async def test_coral_integration():
         print("5. Open Coral Studio and configure with your agents")
 
     except Exception as e:
-        print(f"\n❌ Test failed with error: {e}")
+        print(f"\n[ERROR] Test failed with error: {e}")
         return False
 
     finally:

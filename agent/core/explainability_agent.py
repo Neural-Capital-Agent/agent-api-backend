@@ -5,9 +5,9 @@ import logging
 import uuid
 import re
 
-from .models import ExplanationResponse
-from .config import config
-from .shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
+from ..shared.models import ExplanationResponse
+from ..shared.config import config
+from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class ExplainabilityAgent(BaseAgent):
 
     async def explain_decision(self, action, context=None):
         """Generate comprehensive explanation for a decision"""
-        from .models import ExplanationResponse
+        from ..shared.models import ExplanationResponse
 
         try:
             # Gather context from all relevant agents
@@ -61,12 +61,10 @@ class ExplainabilityAgent(BaseAgent):
             logger.info(f"Generated explanation for action {action_id}")
             # Convert to dict for API compatibility
             return {
-                "explanation": {
-                    "summary": response.explanation,
-                    "risk_assessment": {"level": "moderate"},  # Simplified risk assessment
-                    "confidence_score": response.confidence_score,
-                    "verification_hash": response.verification_hash
-                }
+                "summary": response.explanation,
+                "risk_assessment": {"level": "moderate"},  # Simplified risk assessment
+                "confidence_score": response.confidence_score,
+                "verification_hash": response.verification_hash
             }
 
         except (ValueError, TypeError, AttributeError, KeyError) as e:

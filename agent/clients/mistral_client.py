@@ -6,7 +6,7 @@ from datetime import datetime
 import os
 
 from utils.rate_limiter import llm_rate_limiter, rate_limit_decorator
-from .config import config
+from ..shared.config import config
 
 logger = logging.getLogger(__name__)
 

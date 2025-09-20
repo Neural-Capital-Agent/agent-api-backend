@@ -10,15 +10,21 @@ import pandas as pd
 
 from utils.yahoo import yahoo
 from utils.polygon import polygon
-# Use real FRED API only
+
+# Set up logger
+logger = logging.getLogger(__name__)
+
+# Use real FRED API with fallback for missing API keys
 try:
     from utils.fred_real import fred
-except ImportError:
-    # Fallback to original if real FRED not available
+    logger.info("Using real FRED API")
+except (ImportError, ValueError) as e:
+    # Fallback to mock FRED if real API not available or API key missing
+    logger.warning(f"Real FRED API not available ({e}), using mock fallback")
     from utils.fred import fred
-from .models import MarketData, MacroData, MacroSignal, MacroSignals
-from .config import config
-from .shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
+from ..shared.models import MarketData, MacroData, MacroSignal, MacroSignals
+from ..shared.config import config
+from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
 # LLM imports commented out for pure data retrieval focus
 # try:
 #     from .mistral_client import mistral_client

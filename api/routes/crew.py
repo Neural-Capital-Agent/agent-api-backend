@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 import logging
 from datetime import datetime
 
-from agent.crew_agents import crew_manager
+from agent.crew.agents import crew_manager
 from api.middleware.rate_limiting import rate_limit
 
 logger = logging.getLogger(__name__)

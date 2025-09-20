@@ -12,6 +12,10 @@ from fastapi_cache.backends.inmemory import InMemoryBackend
 import logging
 import time
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from api.api import api_router
 from api.middleware.rate_limiting import RateLimitMiddleware, LLMUsageMiddleware
@@ -30,27 +34,27 @@ app = FastAPI(
     description="""
     Neural Capital Financial Agents API provides comprehensive financial services through AI-powered agents:
 
-    ## 🤖 Available Agents
+    ## [AI] Available Agents
 
     * **Data Agent** - Real-time market data, macro indicators, technical analysis
     * **Portfolio Agent** - Portfolio optimization, risk management, rebalancing
     * **Planner Agent** - Goal parsing, investment strategies, lifecycle planning
     * **Explainability Agent** - Decision explanations, jargon translation
 
-    ## 🔒 Rate Limiting
+    ## [SECURITY] Rate Limiting
 
     * **Basic Tier**: 50 requests/day, 10/hour, 3/minute, 100 LLM credits
     * **Premium Tier**: 200 requests/day, 50/hour, 10/minute, 500 LLM credits
     * **Enterprise Tier**: 1000 requests/day, 200/hour, 50/minute, 2000 LLM credits
 
-    ## 📊 Data Sources
+    ## [DATA] Data Sources
 
     * Yahoo Finance (real-time market data)
     * FRED API (economic indicators)
     * Polygon API (advanced market data)
     * Mistral AI (natural language processing)
 
-    ## 🚀 Features
+    ## [FEATURES] Features
 
     * Multi-agent financial workflows
     * Real-time data integration
@@ -136,23 +140,23 @@ async def startup():
     try:
         # Initialize cache
         FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
-        logger.info("✓ FastAPI cache initialized")
+        logger.info("[OK] FastAPI cache initialized")
 
         # Initialize rate limiting (DISABLED FOR TESTING)
         # from utils.rate_limiter import setup_user_tier, USER_TIER_CONFIGS
         # logger.info("✓ Rate limiting system initialized")
-        # logger.info(f"✓ Available tiers: {list(USER_TIER_CONFIGS.keys())}")
-        logger.info("⚠️ Rate limiting disabled for testing")
+        # logger.info(f"[OK] Available tiers: {list(USER_TIER_CONFIGS.keys())}")
+        logger.info("[WARNING] Rate limiting disabled for testing")
 
         # Initialize agents (lazy loading will happen on first request)
-        logger.info("✓ Financial agents ready for initialization")
+        logger.info("[OK] Financial agents ready for initialization")
 
         # Start Coral Protocol Server in background
         try:
-            from agent.coral_server import coral_server
+            from agent.coral.server import coral_server
             import asyncio
 
-            logger.info("🌊 Starting Coral Protocol Server...")
+            logger.info("[CORAL] Starting Coral Protocol Server...")
 
             # Start the coral server in the background
             asyncio.create_task(coral_server.start_server())
@@ -160,26 +164,26 @@ async def startup():
             # Give the server a moment to start
             await asyncio.sleep(2)
 
-            logger.info("✓ Coral Protocol Server started on http://localhost:5555")
+            logger.info("[OK] Coral Protocol Server started on http://localhost:5555")
 
         except Exception as coral_server_error:
-            logger.error(f"⚠️ Coral Protocol Server startup failed: {coral_server_error}")
-            logger.info("📝 Continuing without Coral Protocol Server")
+            logger.error(f"[WARNING] Coral Protocol Server startup failed: {coral_server_error}")
+            logger.info("[NOTE] Continuing without Coral Protocol Server")
 
         # Initialize CrewAI
         try:
-            from agent.crew_agents import crew_manager
+            from agent.coral.crew_agents import crew_manager
             crew_status = crew_manager.get_crew_status()
-            logger.info(f"🤖 CrewAI initialized with {crew_status['crew_size']} agents")
-            logger.info(f"🎯 CrewAI workflows available at /api/v1/crew/")
+            logger.info(f"[AI] CrewAI initialized with {crew_status['crew_size']} agents")
+            logger.info(f"[TARGET] CrewAI workflows available at /api/v1/crew/")
         except Exception as crew_error:
-            logger.error(f"⚠️ CrewAI initialization failed: {crew_error}")
-            logger.info("📝 Individual agents will still function normally")
+            logger.error(f"[WARNING] CrewAI initialization failed: {crew_error}")
+            logger.info("[NOTE] Individual agents will still function normally")
 
         # Initialize Coral Protocol integration
         try:
-            from agent.coral_registry import coral_registry
-            logger.info("🌊 Initializing Coral Protocol integration...")
+            from agent.coral.registry import coral_registry
+            logger.info("[CORAL] Initializing Coral Protocol integration...")
 
             # Give Coral Server more time to be ready
             await asyncio.sleep(1)
@@ -190,27 +194,27 @@ async def startup():
             total_agents = len(registration_results)
 
             if successful_registrations == total_agents:
-                logger.info(f"✓ All {total_agents} agents registered with Coral Server")
+                logger.info(f"[OK] All {total_agents} agents registered with Coral Server")
             elif successful_registrations > 0:
-                logger.warning(f"⚠️ Partial success: {successful_registrations}/{total_agents} agents registered with Coral Server")
+                logger.warning(f"[WARNING] Partial success: {successful_registrations}/{total_agents} agents registered with Coral Server")
             else:
-                logger.error(f"❌ Failed to register any agents with Coral Server")
+                logger.error(f"[ERROR] Failed to register any agents with Coral Server")
 
-            logger.info(f"🎯 Coral Studio endpoints available at /api/v1/coral/")
-            logger.info(f"🌊 Coral Server URL: {coral_registry.coral_server_url}")
+            logger.info(f"[TARGET] Coral Studio endpoints available at /api/v1/coral/")
+            logger.info(f"[CORAL] Coral Server URL: {coral_registry.coral_server_url}")
 
         except Exception as coral_error:
-            logger.error(f"⚠️ Coral Protocol initialization failed: {coral_error}")
-            logger.info("📝 Agents will still function normally without Coral Studio integration")
+            logger.error(f"[WARNING] Coral Protocol initialization failed: {coral_error}")
+            logger.info("[NOTE] Agents will still function normally without Coral Studio integration")
 
         # Log startup completion
-        logger.info("🚀 Neural Capital Financial Agents API started successfully")
-        logger.info(f"📊 API Documentation: http://localhost:8000/docs")
-        logger.info(f"📈 ReDoc: http://localhost:8000/redoc")
-        logger.info(f"🌊 Coral Protocol Server: http://localhost:5555/health")
+        logger.info("[STARTING] Neural Capital Financial Agents API started successfully")
+        logger.info(f"[DATA] API Documentation: http://localhost:8000/docs")
+        logger.info(f"[DOCS] ReDoc: http://localhost:8000/redoc")
+        logger.info(f"[CORAL] Coral Protocol Server: http://localhost:5555/health")
 
     except Exception as e:
-        logger.error(f"❌ Startup failed: {e}")
+        logger.error(f"[ERROR] Startup failed: {e}")
         raise
 
 
@@ -218,23 +222,23 @@ async def startup():
 async def shutdown():
     """Clean shutdown procedures."""
     try:
-        logger.info("🔄 Shutting down Neural Capital API...")
+        logger.info("[RELOAD] Shutting down Neural Capital API...")
 
         # Close Coral Protocol connections
         try:
-            from agent.coral_registry import coral_registry
+            from agent.coral.registry import coral_registry
             await coral_registry.close()
-            logger.info("✓ Coral Protocol connections closed")
+            logger.info("[OK] Coral Protocol connections closed")
         except Exception as coral_error:
-            logger.warning(f"⚠️ Coral shutdown warning: {coral_error}")
+            logger.warning(f"[WARNING] Coral shutdown warning: {coral_error}")
 
         # Close any open connections
-        from agent.mistral_client import mistral_client
+        from agent.clients.mistral_client import mistral_client
         await mistral_client.close()
 
-        logger.info("✓ Shutdown completed successfully")
+        logger.info("[OK] Shutdown completed successfully")
     except Exception as e:
-        logger.error(f"❌ Shutdown error: {e}")
+        logger.error(f"[ERROR] Shutdown error: {e}")
 
 
 @app.get("/")
@@ -332,7 +336,7 @@ async def system_health():
 
         # Check agents availability (basic check)
         try:
-            from agent.data_agent import DataAgent
+            from agent.core.data_agent import DataAgent
             health_status["components"]["financial_agents"] = {
                 "status": "healthy",
                 "agents": ["data_agent", "portfolio_agent", "planner_agent", "explainability_agent"]
@@ -345,7 +349,7 @@ async def system_health():
 
         # Check CrewAI system
         try:
-            from agent.crew_agents import crew_manager
+            from agent.coral.crew_agents import crew_manager
             crew_status = crew_manager.get_crew_status()
             health_status["components"]["crewai"] = {
                 "status": "healthy" if crew_status.get("status") == "ready" else "unhealthy",
@@ -360,7 +364,7 @@ async def system_health():
 
         # Check Coral Protocol registry
         try:
-            from agent.coral_registry import coral_registry
+            from agent.coral.registry import coral_registry
             coral_status = await coral_registry.get_agent_registry_status()
             health_status["components"]["coral_registry"] = {
                 "status": "healthy" if coral_status.get("registry_status") != "critical" else "degraded",
