@@ -400,3 +400,9 @@ def log_portfolio_creation(user_portfolio_id: str, asset_ids: list, user_id: str
         except Exception as e:
             print(f"Error logging transaction: {e}")
             # Continue even if logging fails
+def get_user_goals(user_id: str) -> bool:
+    """
+    Checks if the user has set up financial goals
+    """
+    response = supabase.table("user_goals").select("*").eq("userid", user_id).execute()
+    return len(response.data) > 0 if response.data is not None else False
