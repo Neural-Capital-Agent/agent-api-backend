@@ -226,7 +226,46 @@
 
 ---------------------
 
-### Table 14 - "transaction_logs"
+### Table 14 - "user_preferences"
+
+| column-name          | data-type    | key          | description-e.g.                          |
+|----------------------|--------------|--------------|-------------------------------------------|
+| preferences_id       | uuid         | primary      | Primary key for user preferences          |
+| user_id              | uuid         | foreign      | Foreign key to users.id_user              |
+| primary_goal         | text         |              | Primary investment goal                   |
+| investment_horizon   | text         |              | Investment time horizon                   |
+| experience_level     | text         |              | User's investment experience level        |
+| risk_tolerance       | integer      |              | Risk tolerance on 1-5 scale              |
+| starting_amount      | numeric      |              | Initial investment amount                 |
+| monthly_contribution | numeric      |              | Monthly contribution amount               |
+| assets_to_avoid      | jsonb        |              | Array of assets user wants to avoid      |
+| comfortable_assets   | jsonb        |              | Array of assets user is comfortable with |
+| auto_pay_amount      | numeric      |              | Auto-pay amount for savings               |
+| auto_pay_cadence     | text         |              | Auto-pay frequency                        |
+| auto_pay_to_savings  | text         |              | Whether auto-pay to savings is enabled   |
+| budget_guardrail     | integer      |              | Minimum cash to keep as percentage       |
+| concentration_cap    | integer      |              | Maximum concentration per position        |
+| consent_to_automation| boolean      |              | Consent to automated portfolio management |
+| contribution_day     | integer      |              | Day of month for contributions            |
+| create_auto_split    | text         |              | Whether to create auto-split for deposits |
+| dca_cadence          | text         |              | Dollar-cost averaging frequency           |
+| equity_stop_loss     | integer      |              | Default stop-loss percentage              |
+| equity_take_profit   | integer      |              | Default take-profit percentage            |
+| margin_allowed       | boolean      |              | Whether margin trading is allowed         |
+| max_drawdown         | integer      |              | Maximum acceptable drawdown percentage    |
+| portfolio_drawdown_alert| integer   |              | Portfolio drawdown alert threshold        |
+| rebalancing          | text         |              | Rebalancing frequency preference          |
+| sector_caps          | jsonb        |              | Sector concentration limits               |
+| split_recipe         | jsonb        |              | Auto-split allocation percentages         |
+| state_of_residence   | text         |              | User's state of residence                 |
+| tax_wrapper          | text         |              | Tax wrapper type (IRA, 401k, etc.)       |
+| created_at           | timestamptz  |              | When preferences were created             |
+| updated_at           | timestamptz  |              | When preferences were last updated        |
+
+
+---------------------
+
+### Table 15 - "transaction_logs"
 
 | column-name          | data-type    | key          | description-e.g.                          |
 |----------------------|--------------|--------------|-------------------------------------------|
