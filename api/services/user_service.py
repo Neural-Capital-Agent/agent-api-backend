@@ -4,6 +4,9 @@ from api.schemas.user import UserCreate, UserLogin
 def get_user_by_email(email: str):
     response = supabase.table("users").select("*").eq("email", email).execute()
     return response.data[0] if response.data else None
+def get_user_by_id(user_id: str):  
+    response = supabase.table("users").select("*").eq("id_user", user_id).execute()
+    return response.data[0] if response.data else None
 
 def add_user(user: UserCreate):
     user_response= supabase.auth.sign_up({"email": user.email, "password": user.password})

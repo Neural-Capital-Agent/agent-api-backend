@@ -29,9 +29,20 @@ async def create_user_goals(user_id: str, user_input: UserInput):
         return user_portafolio_service.process_onboarding_form(user_input, user_id)
     except Exception as e:
         return {"error": str(e)}
+
 @router.get("/{user_id}/setup")
 async def get_user_goals(user_id: str):
+    try: 
+        if user_portafolio_service.get_user_goals(user_id):
+            return True
+        else:
+            return False
+    except Exception as e:
+        return {"error": str(e)}
+
+@router.get("/{user_id}")
+async def get_user(user_id: str):
     try:
-        return user_portafolio_service.get_user_goals(user_id)
+        return user_service.get_user_by_id(user_id)
     except Exception as e:
         return {"error": str(e)}
