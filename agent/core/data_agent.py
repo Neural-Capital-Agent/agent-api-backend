@@ -10,6 +10,7 @@ import pandas as pd
 
 from utils.yahoo import yahoo
 from utils.polygon import polygon
+from .dashboard_data_service import DashboardDataService
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -59,6 +60,24 @@ class DataAgent(BaseAgent):
         )
 
         self.macro_indicators = config.data_agent.MACRO_INDICATORS
+
+        # Dashboard ETFs - your requested list
+        self.dashboard_etfs = {
+            "QQQ": "Invesco QQQ Trust",
+            "ETH": "Grayscale Ethereum Mini Trust ETF",  # Using ETHE as ticker
+            "SPY": "SPDR S&P 500 ETF",
+            "VXUS": "Vanguard Total International Stock Index Fund ETF Shares",
+            "IEF": "iShares 7-10 Year Treasury Bond ETF",
+            "BTC": "Grayscale Bitcoin Mini Trust ETF",  # Using BITO as ticker
+            "BND": "Vanguard Total Bond Market Index Fund",
+            "SHY": "iShares 1-3 Year Treasury Bond ETF"
+        }
+
+        # Map display names to actual tickers
+        self.ticker_mapping = {
+            "ETH": "ETHE",  # Grayscale Ethereum Mini Trust ETF
+            "BTC": "BITO"   # ProShares Bitcoin Strategy ETF
+        }
 
         self.update_frequencies = {
             "daily": ["market_data", "vix", "yield_curve", "credit_spreads", "dxy"],
@@ -475,3 +494,208 @@ class DataAgent(BaseAgent):
         except (KeyError, TypeError, AttributeError) as e:
             logger.warning(f"Error determining market regime: {e}")
             return "unknown"
+
+    async def fetch_dashboard_etfs(self, save_to_db: bool = True) -> Dict[str, Any]:
+        """
+        Fetch market data for all dashboard ETFs and optionally save to database.
+
+        Args:
+            save_to_db: Whether to save data to Supabase dashboard tables
+
+        Returns:
+            Dictionary containing market data for all dashboard ETFs
+        """
+        try:
+            etf_data = {}
+            failed_fetches = []
+
+            for display_symbol, name in self.dashboard_etfs.items():
+                try:
+                    # Get actual ticker (handle mapping for crypto ETFs)
+                    actual_ticker = self.ticker_mapping.get(display_symbol, display_symbol)
+
+                    # Fetch market data
+                    market_data = await self.fetch_market_data(actual_ticker)
+
+                    # Fetch additional info using yfinance
+                    additional_info = await self._get_additional_etf_info(actual_ticker)
+
+                    etf_data[display_symbol] = {
+                        "market_data": market_data,
+                        "additional_info": additional_info,
+                        "name": name,
+                        "ticker": actual_ticker
+                    }
+
+                    # Save to database if requested
+                    if save_to_db:
+                        success = await DashboardDataService.save_market_data(
+                            market_data,
+                            {**additional_info, "name": name}
+                        )
+                        if not success:
+                            logger.warning(f"Failed to save {display_symbol} to database")
+
+                except Exception as e:
+                    logger.error(f"Failed to fetch data for {display_symbol}: {e}")
+                    failed_fetches.append(display_symbol)
+                    continue
+
+            # Fetch and save additional dashboard data
+            if save_to_db:
+                await self._save_dashboard_supplementary_data()
+
+            return {
+                "etf_data": etf_data,
+                "failed_fetches": failed_fetches,
+                "timestamp": get_current_timestamp(),
+                "total_fetched": len(etf_data),
+                "total_failed": len(failed_fetches)
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching dashboard ETFs: {e}")
+            return {"error": str(e), "timestamp": get_current_timestamp()}
+
+    async def _get_additional_etf_info(self, ticker: str) -> Dict[str, Any]:
+        """
+        Get additional ETF information using yfinance.
+
+        Args:
+            ticker: ETF ticker symbol
+
+        Returns:
+            Dictionary containing additional ETF info
+        """
+        try:
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            hist = stock.history(period="1y")
+
+            if hist.empty:
+                return {}
+
+            return {
+                "volume": info.get("volume"),
+                "market_cap": info.get("marketCap"),
+                "pe_ratio": info.get("trailingPE"),
+                "dividend_yield": info.get("dividendYield"),
+                "day_high": info.get("dayHigh"),
+                "day_low": info.get("dayLow"),
+                "year_high": float(hist['High'].max()) if not hist.empty else None,
+                "year_low": float(hist['Low'].min()) if not hist.empty else None,
+                "expense_ratio": info.get("annualReportExpenseRatio"),
+                "total_assets": info.get("totalAssets"),
+                "beta": info.get("beta")
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting additional info for {ticker}: {e}")
+            return {}
+
+    async def _save_dashboard_supplementary_data(self) -> None:
+        """Save supplementary dashboard data (volatility, treasury, macro)."""
+        try:
+            # Fetch volatility and treasury data
+            vix_data = await self.fetch_volatility_data()
+            treasury_data = await self.fetch_treasury_yields()
+
+            # Determine market regime
+            market_regime = None
+            if vix_data:
+                market_regime = self._determine_market_regime(None, vix_data, treasury_data or {})
+
+            # Save market context data using simplified service
+            if vix_data or treasury_data:
+                await DashboardDataService.save_market_context_data(
+                    vix_data=vix_data,
+                    treasury_data=treasury_data,
+                    market_regime=market_regime
+                )
+
+        except Exception as e:
+            logger.error(f"Error saving supplementary dashboard data: {e}")
+
+    async def get_dashboard_data(self, user_id: str = None) -> Dict[str, Any]:
+        """
+        Get comprehensive dashboard data from database.
+
+        Args:
+            user_id: Optional user ID to get personalized watchlist
+
+        Returns:
+            Dictionary containing all dashboard data
+        """
+        try:
+            # Get user's watchlist or default to dashboard ETFs
+            symbols = list(self.dashboard_etfs.keys())
+
+            # Map display symbols to actual tickers for database lookup
+            db_symbols = [self.ticker_mapping.get(symbol, symbol) for symbol in symbols]
+
+            # Get data from database
+            dashboard_data = await DashboardDataService.get_dashboard_data(db_symbols)
+
+            # Add ETF names and display symbols
+            if dashboard_data.get("etf_data"):
+                for item in dashboard_data["etf_data"]:
+                    ticker = item.get("symbol", "")
+                    # Find display symbol from ticker
+                    display_symbol = ticker
+                    for display, actual in self.ticker_mapping.items():
+                        if actual == ticker:
+                            display_symbol = display
+                            break
+
+                    item["display_symbol"] = display_symbol
+                    item["etf_name"] = self.dashboard_etfs.get(display_symbol, ticker)
+
+            return dashboard_data
+
+        except Exception as e:
+            logger.error(f"Error getting dashboard data: {e}")
+            return {"error": str(e), "timestamp": get_current_timestamp()}
+
+    async def refresh_dashboard_data(self) -> Dict[str, Any]:
+        """
+        Refresh all dashboard data by fetching new data and saving to database.
+
+        Returns:
+            Dictionary containing refresh status and data
+        """
+        try:
+            logger.info("Starting dashboard data refresh...")
+
+            # Fetch and save all ETF data
+            etf_result = await self.fetch_dashboard_etfs(save_to_db=True)
+
+            # Fetch technical indicators for main ETFs
+            technical_results = {}
+            main_etfs = ["SPY", "QQQ", "VXUS", "IEF"]
+
+            for symbol in main_etfs:
+                try:
+                    actual_ticker = self.ticker_mapping.get(symbol, symbol)
+                    indicators = await self.fetch_technical_indicators(actual_ticker)
+                    if indicators:
+                        await DashboardDataService.save_technical_indicators(actual_ticker, indicators)
+                        technical_results[symbol] = indicators
+                except Exception as e:
+                    logger.warning(f"Failed to fetch technical indicators for {symbol}: {e}")
+
+            logger.info("Dashboard data refresh completed")
+
+            return {
+                "status": "success",
+                "etf_data": etf_result,
+                "technical_indicators": technical_results,
+                "timestamp": get_current_timestamp()
+            }
+
+        except Exception as e:
+            logger.error(f"Error refreshing dashboard data: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "timestamp": get_current_timestamp()
+            }

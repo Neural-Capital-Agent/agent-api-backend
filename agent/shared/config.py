@@ -41,7 +41,8 @@ class DataAgentConfig:
     EQUITY_UNIVERSE = ["SPY", "QQQ", "VXUS"]
     FIXED_INCOME_UNIVERSE = ["SGOV", "SHY", "IEF", "BND", "TIP"]
     ALTERNATIVES_UNIVERSE = ["GLD"]
-    CRYPTO_UNIVERSE = ["BTC-USD", "ETH-USD"]
+    CRYPTO_UNIVERSE = ["BTC-USD", "ETH-USD", "ETHE", "BITO"]  # Added ETF versions
+    ETF_UNIVERSE = ["QQQ", "SPY", "VXUS", "IEF", "BND", "SHY", "ETHE", "BITO"]  # Your requested ETFs
 
     # Market regime fallback responses
     MARKET_REGIME_FALLBACK = "normal_market_conditions"
