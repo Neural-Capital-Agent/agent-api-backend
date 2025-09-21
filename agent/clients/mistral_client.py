@@ -31,6 +31,21 @@ class MistralLLMClient:
         if not self.api_key:
             logger.warning("No API key provided for Mistral LLM client. Set AI_ML_API_KEY environment variable.")
 
+    def _serialize_for_json(self, obj):
+        """Helper method to serialize objects containing Enums for JSON"""
+        if hasattr(obj, '__dict__'):
+            result = {}
+            for key, value in obj.__dict__.items():
+                if hasattr(value, 'value'):  # Handle Enum objects
+                    result[key] = value.value
+                else:
+                    result[key] = value
+            return result
+        elif hasattr(obj, 'value'):  # Handle direct Enum
+            return obj.value
+        else:
+            return obj
+
     async def __aenter__(self):
         self.client = httpx.AsyncClient(
             headers={"Authorization": f"Bearer {self.api_key}"},
@@ -216,9 +231,20 @@ Additional context: {json.dumps(context, indent=2)}"""
 
 Respond in JSON format only."""
 
+            # Safely serialize goal and strategy
+            try:
+                goal_json = json.dumps(goal, default=self._serialize_for_json, indent=2)
+            except:
+                goal_json = str(goal)
+
+            try:
+                strategy_json = json.dumps(strategy, default=self._serialize_for_json, indent=2)
+            except:
+                strategy_json = str(strategy)
+
             user_message = f"""Create an investment plan for:
-Goal: {json.dumps(goal, indent=2)}
-Strategy: {json.dumps(strategy, indent=2)}"""
+Goal: {goal_json}
+Strategy: {strategy_json}"""
 
             messages = [
                 {"role": "system", "content": system_prompt},
@@ -301,9 +327,20 @@ Analyze the provided signals and market data, then respond with JSON containing:
 3. reasoning: brief explanation of the validation
 4. risk_level: "low", "medium", or "high" based on current conditions"""
 
+            # Safely serialize signals and market_data
+            try:
+                signals_json = json.dumps(signals, default=self._serialize_for_json, indent=2)
+            except:
+                signals_json = str(signals)
+
+            try:
+                market_data_json = json.dumps(market_data, default=self._serialize_for_json, indent=2)
+            except:
+                market_data_json = str(market_data)
+
             user_message = f"""Validate these market signals:
-Signals: {json.dumps(signals, indent=2)}
-Market Data: {json.dumps(market_data, indent=2)}"""
+Signals: {signals_json}
+Market Data: {market_data_json}"""
 
             messages = [
                 {"role": "system", "content": system_prompt},

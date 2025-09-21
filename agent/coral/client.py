@@ -76,41 +76,56 @@ class CoralClient:
                 return False
 
             # Try to register with the actual Coral Protocol server
-            try:
-                response = await self.client.post(
-                    f"{self.coral_server_url}/register",
-                    json=registration_data,
-                    timeout=10.0
-                )
-
-                if response.status_code == 200:
-                    result = response.json()
-                    logger.info(f"[OK] Successfully registered {self.agent_id} with Coral Server")
-
-                    # Store in local registry too
-                    self.registered_agents[self.agent_id] = AgentRegistration(
-                        agent_id=self.agent_id,
-                        agent_type=agent_type,
-                        capabilities=capabilities,
-                        endpoint=endpoint
+            # Add retry logic for better reliability
+            max_retries = 3
+            retry_delay = 2
+            
+            for attempt in range(max_retries):
+                try:
+                    response = await self.client.post(
+                        f"{self.coral_server_url}/register",
+                        json=registration_data,
+                        timeout=10.0
                     )
-                    return True
-                else:
-                    logger.error(f"Registration failed with status {response.status_code}: {response.text}")
-                    return False
 
-            except Exception as server_error:
-                logger.warning(f"Failed to register with Coral Server: {server_error}")
-                logger.info("Falling back to local registration only")
+                    if response.status_code == 200:
+                        result = response.json()
+                        logger.info(f"[OK] Successfully registered {self.agent_id} with Coral Server")
 
-                # Fallback to local registration
-                self.registered_agents[self.agent_id] = AgentRegistration(
-                    agent_id=self.agent_id,
-                    agent_type=agent_type,
-                    capabilities=capabilities,
-                    endpoint=endpoint
-                )
-                return True
+                        # Store in local registry too
+                        self.registered_agents[self.agent_id] = AgentRegistration(
+                            agent_id=self.agent_id,
+                            agent_type=agent_type,
+                            capabilities=capabilities,
+                            endpoint=endpoint
+                        )
+                        return True
+                    else:
+                        logger.error(f"Registration failed with status {response.status_code}: {response.text}")
+                        if attempt < max_retries - 1:
+                            logger.info(f"Retrying registration in {retry_delay} seconds... (attempt {attempt + 1}/{max_retries})")
+                            await asyncio.sleep(retry_delay)
+                            continue
+                        return False
+
+                except Exception as server_error:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Registration attempt {attempt + 1} failed: {server_error}")
+                        logger.info(f"Retrying in {retry_delay} seconds...")
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    else:
+                        logger.warning(f"Failed to register with Coral Server: All connection attempts failed")
+                        logger.info("Falling back to local registration only")
+
+                        # Fallback to local registration
+                        self.registered_agents[self.agent_id] = AgentRegistration(
+                            agent_id=self.agent_id,
+                            agent_type=agent_type,
+                            capabilities=capabilities,
+                            endpoint=endpoint
+                        )
+                        return True
 
         except (ValueError, TypeError) as e:
             logger.error(f"Failed to register agent: {e}")
@@ -290,6 +305,30 @@ class CoralClient:
                         return {"is_valid": True, "confidence": 0.5, "reasoning": "Default validation due to processing error", "error": str(e)}
                 else:
                     raise Exception("Mistral LLM client not available")
+
+            # Handle data_agent methods
+            elif target_agent == "data_agent" and method == "get_market_context":
+                # Import here to avoid circular imports
+                from ..core.data_agent import DataAgent
+                try:
+                    data_agent = DataAgent()
+                    timestamp = parameters.get("timestamp")
+                    result = await data_agent.get_market_context(timestamp)
+                    return result
+                except Exception as e:
+                    logger.error(f"Data agent error for get_market_context: {e}")
+                    return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+            elif target_agent == "data_agent" and method == "get_market_data":
+                from ..core.data_agent import DataAgent
+                try:
+                    data_agent = DataAgent()
+                    symbol = parameters.get("symbol", "SPY")
+                    result = await data_agent.fetch_market_data(symbol)
+                    return result.__dict__ if hasattr(result, '__dict__') else result
+                except Exception as e:
+                    logger.error(f"Data agent error for get_market_data: {e}")
+                    return {"error": str(e), "symbol": parameters.get("symbol", "SPY")}
 
             # No mock responses - real implementation required
             raise Exception(f"Agent {target_agent} with method {method} not implemented or unavailable")
