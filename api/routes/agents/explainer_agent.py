@@ -3,7 +3,7 @@ Explainer Agent API Routes
 Handles decision explanations, jargon translation, and risk communication.
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Body
+from fastapi import APIRouter, HTTPException, Depends, Body, Request
 from typing import Optional, Dict, Any
 from datetime import datetime
 import logging
@@ -60,18 +60,47 @@ async def explain_decision(
 
 @router.post("/translate-jargon")
 async def translate_jargon(
-    request: Dict[str, Any] = Body(..., description="Request containing text and optional word_limit"),
+    request: Request,
     user_id: str = Depends(get_user_id)
 ):
     """Convert technical financial terms to plain English."""
     try:
-        # Handle both string input and dict input for backward compatibility
-        if isinstance(request, str):
-            technical_text = request
+        # Get content type to determine how to parse the request
+        content_type = request.headers.get("content-type", "").lower()
+        
+        if "application/json" in content_type:
+            # Handle JSON input
+            request_data = await request.json()
+            if isinstance(request_data, dict):
+                technical_text = request_data.get("text") or request_data.get("technical_text", "")
+                word_limit = request_data.get("word_limit")
+            else:
+                raise ValueError("JSON request must be a dictionary")
+        elif "text/plain" in content_type:
+            # Handle plain text input
+            request_body = await request.body()
+            technical_text = request_body.decode('utf-8')
             word_limit = None
         else:
-            technical_text = request.get("text") or request.get("technical_text", "")
-            word_limit = request.get("word_limit")
+            # Try to parse as JSON first, then as text
+            try:
+                request_data = await request.json()
+                if isinstance(request_data, dict):
+                    technical_text = request_data.get("text") or request_data.get("technical_text", "")
+                    word_limit = request_data.get("word_limit")
+                elif isinstance(request_data, str):
+                    technical_text = request_data
+                    word_limit = None
+                else:
+                    raise ValueError("Request must contain text")
+            except:
+                # Fallback to reading as text
+                request_body = await request.body()
+                technical_text = request_body.decode('utf-8')
+                word_limit = None
+
+        if not technical_text:
+            raise ValueError("No text provided for translation")
 
         # Set custom word limit if provided
         if word_limit and isinstance(word_limit, int) and word_limit > 0:

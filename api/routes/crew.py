@@ -109,7 +109,7 @@ async def portfolio_advisory(request: PortfolioAdvisoryRequest, req: Request):
     description="Get quick financial advice for simple questions using AI agents",
     response_description="Clear financial guidance and advice"
 )
-@rate_limit(cost=2)
+# @rate_limit(cost=2)  # Temporarily disabled for debugging
 async def quick_advice(request: QuickAdviceRequest, req: Request):
     """Get quick financial advice"""
     try:
