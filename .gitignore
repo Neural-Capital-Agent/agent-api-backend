@@ -174,3 +174,10 @@ utils/__pycache__/Supabase.cpython-312.pyc
 .claude
 
 temp_storage/
+
+
+tests/
+.tests/
+
+database/
+.database/
