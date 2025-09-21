@@ -613,6 +613,20 @@ class DataAgent(BaseAgent):
                     market_regime=market_regime
                 )
 
+            # Fetch and save macro data to dashboard_macro_data table
+            macro_data_all = []
+            for indicator in ["CPI", "10Y_TREASURY", "FED_FUNDS_RATE", "UNEMPLOYMENT"]:
+                try:
+                    macro_data = await self.fetch_macro_data(indicator, date_range=30)
+                    if macro_data:
+                        macro_data_all.extend(macro_data)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch macro data for {indicator}: {e}")
+                    continue
+
+            if macro_data_all:
+                await DashboardDataService.save_macro_data(macro_data_all)
+
         except Exception as e:
             logger.error(f"Error saving supplementary dashboard data: {e}")
 

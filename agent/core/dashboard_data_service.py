@@ -265,6 +265,49 @@ class DashboardDataService:
             return {"error": str(e)}
 
     @staticmethod
+    async def save_macro_data(macro_data_list: List[MacroData]) -> bool:
+        """
+        Save macro-economic data to dashboard_macro_data table
+
+        Args:
+            macro_data_list: List of MacroData objects
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not macro_data_list:
+                return True
+
+            success_count = 0
+            for macro_data in macro_data_list:
+                data = {
+                    "indicator_name": macro_data.indicator,
+                    "value": float(macro_data.value) if macro_data.value else 0.0,
+                    "date": macro_data.date.date() if macro_data.date else datetime.now().date(),
+                    "source": "FRED",
+                    "metadata": {
+                        "frequency": macro_data.frequency if hasattr(macro_data, 'frequency') else "unknown"
+                    },
+                    "created_at": datetime.now().isoformat()
+                }
+
+                response = supabase.table("dashboard_macro_data").upsert(
+                    data,
+                    on_conflict="indicator_name,date"
+                ).execute()
+
+                if response.data:
+                    success_count += 1
+
+            logger.info(f"Successfully saved {success_count}/{len(macro_data_list)} macro data records")
+            return success_count > 0
+
+        except Exception as e:
+            logger.error(f"Error saving macro data: {e}")
+            return False
+
+    @staticmethod
     async def save_user_watchlist(user_id: str, symbols: List[str]) -> bool:
         """
         Save user's watchlist symbols
