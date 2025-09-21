@@ -5,311 +5,438 @@
 
 `This is not final yet, still in brainstorming phase`
 
+## In Supabase (PostgreSQL)
 
 ---------------------
 
-
-### Table 1 - "public.users"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| id                   | int8         |              | Internal auto-increment ID                |
-| created_at           | timestamptz  |              | Timestamp when user was created           |
-| email                | text         |              | User's email address                      |
-| id_alpaca            | text         |              | Alpaca trading account ID                 |
-| city                 | text         |              | User's city                               |
-| contact_email        | text         |              | Contact email address                     |
-| contact_family       | text         |              | Family contact name                       |
-| contact_given        | text         |              | Given contact name                        |
-| country_of_birth     | text         |              | Country of birth                          |
-| country_of_citizenship| text         |              | Country of citizenship                    |
-| date_of_birth        | date         |              | Date of birth for age-based planning      |
-| family_name          | text         |              | User's family name                        |
-| given_name           | text         |              | User's given name                         |
-| phone                | text         |              | Phone number (changed from float8)        |
-| postal_code          | text         |              | Postal code (changed from int8)           |
-| state                | text         |              | State or province                        |
-| street_address       | text         |              | Street address                            |
-| tax_id               | text         |              | Tax ID (changed from int8)                |
-| id_user              | uuid         | primary      | Primary key UUID for external referencing |
-
----------------------
-
-### Table 2 - "assets"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| AssetID              | uuid         | primary      | Primary key, auto-increment or UUID       |
-| Ticker               | text         | unique       | Stock ticker symbol (e.g., SPY, BTC)      |
-| AssetName            | text         |              | Full asset name (e.g., S&P 500 ETF)       |
-| AssetType            | text         |              | Asset category (Equities, Crypto, etc.)   |
-| IsOptional           | boolean      |              | Whether asset is optional for portfolios  |
-| Description          | text         |              | Optional detailed description             |
-
----------------------
-
-### Table 3 - "risk_tiers"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| RiskTierID           | integer      | primary      | Primary key (1-5 scale)                   |
-| RiskName             | text         |              | Risk level name (Conservative, Aggressive)|
-| ProfileDescription   | text         |              | Description of risk profile               |
-| InvestmentHorizon    | text         |              | Recommended investment timeframe          |
-| ExpectedReturn       | numeric      |              | Expected annual return (e.g., 0.04)      |
-| Volatility           | numeric      |              | Expected volatility (e.g., 0.05)         |
-| SharpeRatio          | numeric      |              | Risk-adjusted return metric               |
-| TargetAllocations    | jsonb        |              | Asset allocation percentages as JSON      |
-
-
----------------------
-
-
-### Table 4 - "signal_rules"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| SignalID             | uuid         | primary      | Primary key for signal rule               |
-| SignalName           | text         |              | Name of market signal                     |
-| Description          | text         |              | Explanation of signal logic               |
-| Frequency            | text         |              | How often signal is checked               |
-| ConditionTrigger     | jsonb        |              | Conditions that activate signal           |
-| Action               | jsonb        |              | Portfolio adjustments to make             |
-| ApplicableRiskTiers  | text         |              | Which risk tiers this applies to          |
-| CooldownPeriodDays   | integer      |              | Days to wait before re-triggering         |
-| ReversalCondition    | jsonb        |              | Conditions to reverse the action          |
-
-
----------------------
-
-### Table 5 - "planner_rules"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| RuleID               | uuid         | primary      | Primary key for planner rule              |
-| RuleName             | text         |              | Name of planning rule                     |
-| RuleType             | text         |              | Type of rule (Age-Based, Goal-Based)      |
-| Conditions           | jsonb        |              | Criteria for applying rule                |
-| ActionAllocations    | jsonb        |              | Asset allocations for conditions          |
-| ExplanationTemplate  | text         |              | Template for explaining the rule          |
-
-
----------------------
-
-### Table 6 - "market_time_series"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| DataPointID          | uuid         | primary      | Primary key for data point                |
-| Date                 | timestamp    |              | Date/timestamp of the data point          |
-| AssetID              | uuid         | foreign      | Foreign key to assets table               |
-| MetricName           | text         |              | Name of metric (ClosePrice, VIX_Level)    |
-| Value                | numeric      |              | Numerical value of the metric             |
-| DataSource           | text         |              | Source of data (FRED, Polygon, Yahoo)     |
-
----------------------
-
-### Table 7 - "market_events"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| EventID              | uuid         | primary      | Primary key for market event              |
-| EventName            | text         |              | Name of market event or crisis            |
-| StartDate            | date         |              | Start date of the event                   |
-| EndDate              | date         |              | End date of the event                     |
-| Description          | text         |              | Description of the market event           |
-
-
----------------------
-
-
-### Table 8 - "agents"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| AgentID              | uuid         | primary      | Primary key for agent                     |
-| AgentName            | text         |              | Name of the Coral Protocol agent          |
-| Description          | text         |              | Description of agent's function           |
-| API_Endpoint         | text         |              | URL endpoint for agent API                |
-| PricingModel         | text         |              | Pricing structure (per-call, per-minute)  |
-| CostPerUnit          | numeric      |              | Cost in Solana per unit                   |
-| OwnerWalletAddress   | text         |              | Solana wallet address of owner            |
-| IsRentable           | boolean      |              | Whether agent is available for rent       |
-
-
-
----------------------
-
-### Table 9 - "agent_transactions"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| TransactionID        | uuid         | primary      | Primary key for transaction               |
-| AgentID              | uuid         | foreign      | Foreign key to agents table               |
-| UserID               | uuid         | foreign      | Foreign key to users.id_user              |
-| Timestamp            | timestamptz  |              | When transaction occurred                 |
-| InputData            | jsonb        |              | Input data sent to agent                  |
-| OutputData           | jsonb        |              | Output data received from agent           |
-| CostInSolana         | numeric      |              | Transaction cost in Solana                |
-| SolanaTxnHash        | text         |              | Solana blockchain transaction hash        |
-
-
----------------------
-
-
-### Table 10 - "user_goals"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| GoalID               | uuid         | primary      | Primary key for user goal                 |
-| UserID               | uuid         | foreign      | Foreign key to users.id_user              |
-| GoalDescription      | text         |              | Description of financial goal             |
-| GoalType             | text         |              | Type of goal (Retirement, Education)      |
-| TargetAmount         | numeric      |              | Financial target amount                   |
-| TargetDate           | date         |              | Desired completion date                   |
-| CurrentSavings       | numeric      |              | Current amount saved                      |
-| AssignedRiskTierID   | integer      | foreign      | Foreign key to risk_tiers table           |
-
-
----------------------
-
-### Table 11 - "user_portfolios"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| UserPortfolioID      | uuid         | primary      | Primary key for user portfolio            |
-| UserID               | uuid         | foreign      | Foreign key to users.id_user              |
-| GoalID               | uuid         | foreign      | Foreign key to user_goals table           |
-| PortfolioName        | text         |              | Name of the portfolio                     |
-| CurrentRiskTierID    | integer      | foreign      | Foreign key to risk_tiers table           |
-| CreationDate         | date         |              | When portfolio was created                |
-| LastRebalanceDate    | date         |              | Last time portfolio was rebalanced        |
-| CurrentTotalValue    | numeric      |              | Total current value of holdings           |
-
-
----------------------
-
-### Table 12 - "user_portfolio_holdings"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| HoldingID            | uuid         | primary      | Primary key for portfolio holding         |
-| UserPortfolioID      | uuid         | foreign      | Foreign key to user_portfolios table      |
-| AssetID              | uuid         | foreign      | Foreign key to assets table               |
-| CurrentAllocationPercentage| numeric   |              | Current percentage allocation             |
-| TargetAllocationPercentage| numeric   |              | Target percentage allocation              |
-| NumberOfUnits        | numeric      |              | Number of units/shares held               |
-| AverageCostBasis     | numeric      |              | Average cost per unit                     |
-| CurrentValue         | numeric      |              | Current total value of holding            |
-
-
----------------------
-
-### Table 13 - "portfolio_performance_metrics"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| PerformanceRecordID  | uuid         | primary      | Primary key for performance record        |
-| UserPortfolioID      | uuid         | foreign      | Foreign key to user_portfolios table      |
-| Date                 | date         |              | Date of performance measurement           |
-| SharpeRatio          | numeric      |              | Risk-adjusted return metric               |
-| SortinoRatio         | numeric      |              | Downside risk-adjusted return             |
-| MaxDrawdown          | numeric      |              | Maximum peak-to-trough decline            |
-| Turnover             | numeric      |              | Portfolio turnover rate                   |
-| WinRate              | numeric      |              | Percentage of winning trades              |
-| InformationRatio     | numeric      |              | Risk-adjusted excess return               |
-| CAGR                 | numeric      |              | Compound Annual Growth Rate               |
-| Volatility           | numeric      |              | Portfolio volatility                      |
-| ReturnDuringCrash    | numeric      |              | Return during market crashes              |
-| RecoveryTimeDays     | integer      |              | Days to recover from drawdown             |
-
-
----------------------
-
-### Table 14 - "user_preferences"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| preferences_id       | uuid         | primary      | Primary key for user preferences          |
-| user_id              | uuid         | foreign      | Foreign key to users.id_user              |
-| primary_goal         | text         |              | Primary investment goal                   |
-| investment_horizon   | text         |              | Investment time horizon                   |
-| experience_level     | text         |              | User's investment experience level        |
-| risk_tolerance       | integer      |              | Risk tolerance on 1-5 scale              |
-| starting_amount      | numeric      |              | Initial investment amount                 |
-| monthly_contribution | numeric      |              | Monthly contribution amount               |
-| assets_to_avoid      | jsonb        |              | Array of assets user wants to avoid      |
-| comfortable_assets   | jsonb        |              | Array of assets user is comfortable with |
-| auto_pay_amount      | numeric      |              | Auto-pay amount for savings               |
-| auto_pay_cadence     | text         |              | Auto-pay frequency                        |
-| auto_pay_to_savings  | text         |              | Whether auto-pay to savings is enabled   |
-| budget_guardrail     | integer      |              | Minimum cash to keep as percentage       |
-| concentration_cap    | integer      |              | Maximum concentration per position        |
-| consent_to_automation| boolean      |              | Consent to automated portfolio management |
-| contribution_day     | integer      |              | Day of month for contributions            |
-| create_auto_split    | text         |              | Whether to create auto-split for deposits |
-| dca_cadence          | text         |              | Dollar-cost averaging frequency           |
-| equity_stop_loss     | integer      |              | Default stop-loss percentage              |
-| equity_take_profit   | integer      |              | Default take-profit percentage            |
-| margin_allowed       | boolean      |              | Whether margin trading is allowed         |
-| max_drawdown         | integer      |              | Maximum acceptable drawdown percentage    |
-| portfolio_drawdown_alert| integer   |              | Portfolio drawdown alert threshold        |
-| rebalancing          | text         |              | Rebalancing frequency preference          |
-| sector_caps          | jsonb        |              | Sector concentration limits               |
-| split_recipe         | jsonb        |              | Auto-split allocation percentages         |
-| state_of_residence   | text         |              | User's state of residence                 |
-| tax_wrapper          | text         |              | Tax wrapper type (IRA, 401k, etc.)       |
-| created_at           | timestamptz  |              | When preferences were created             |
-| updated_at           | timestamptz  |              | When preferences were last updated        |
-
-
----------------------
-
-### Table 15 - "transaction_logs"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| LogID                | uuid         | primary      | Primary key for transaction log           |
-| UserPortfolioID      | uuid         | foreign      | Foreign key to user_portfolios table      |
-| Timestamp            | timestamptz  |              | When transaction occurred                 |
-| ActionType           | text         |              | Type of action (Buy, Sell, Rebalance)     |
-| AssetID              | uuid         | foreign      | Foreign key to assets table               |
-| Quantity             | numeric      |              | Number of units traded                    |
-| Price                | numeric      |              | Price per unit                            |
-| Amount               | numeric      |              | Total transaction amount                  |
-| Reason               | text         |              | Reason for transaction                    |
-| SignalID             | uuid         | foreign      | Foreign key to signal_rules table         |
-| IsSimulated          | boolean      |              | Whether this is a simulation/backtest     |
-| AlpacaOrderID        | text         |              | Alpaca trading platform order ID          |
-
-
----------------------
-
-### Table 16 - "investment_plans"
-
-| column-name          | data-type    | key          | description-e.g.                          |
-|----------------------|--------------|--------------|-------------------------------------------|
-| id                   | uuid         | primary      | Primary key for investment plan           |
-| user_id              | uuid         | foreign      | Foreign key to users.id_user              |
-| financial_goals      | text         |              | User's financial goals input from frontend|
-| investment_preferences| text        |              | User's investment preferences from frontend|
-| plan_data            | jsonb        |              | Complete investment plan from agents      |
-| plan_name            | varchar(255) |              | User-defined or auto-generated plan name  |
-| plan_type            | varchar(50)  |              | RETIREMENT, HOUSE, EDUCATION, GENERAL     |
-| risk_level           | varchar(20)  |              | CONSERVATIVE, BALANCED, AGGRESSIVE        |
-| time_horizon         | integer      |              | Investment time horizon in years          |
-| target_amount        | numeric(15,2)|              | Target investment amount                  |
-| agent_2_data         | jsonb        |              | Portfolio Agent (Agent 2) output data    |
-| agent_3_data         | jsonb        |              | Planner Agent (Agent 3) output data      |
-| processing_status    | varchar(20)  |              | PENDING, PROCESSING, COMPLETED, FAILED    |
-| is_active            | boolean      |              | Whether plan is currently active          |
-| is_favorite          | boolean      |              | Whether plan is marked as favorite        |
-| created_at           | timestamptz  |              | When plan was created                     |
-| updated_at           | timestamptz  |              | When plan was last updated                |
-| last_reviewed_at     | timestamptz  |              | When plan was last reviewed by user       |
-| expected_return      | numeric(8,4) |              | Expected annual return percentage         |
-| actual_return        | numeric(8,4) |              | Actual return if plan is implemented      |
-| performance_notes    | text         |              | Notes on plan performance                 |
-
-
----------------------
+### users
+- **id**: bigint
+- **created_at**: timestamp with time zone
+- **email**: text
+- **id_alpaca**: text
+- **city**: text
+- **contact_email**: text
+- **contact_family**: text
+- **contact_given**: text
+- **country_of_birth**: text
+- **country_of_citizenship**: text
+- **date_of_birth**: date
+- **family_name**: text
+- **given_name**: text
+- **phone**: double precision
+- **postal_code**: bigint
+- **state**: text
+- **street_address**: text
+- **tax_id**: bigint
+- **id_user**: uuid
+- **user_tier**: text
+
+---
+### agent_transactions
+- **transactionid**: uuid
+- **agentid**: uuid
+- **userid**: uuid
+- **timestamp**: timestamp with time zone
+- **inputdata**: jsonb
+- **outputdata**: jsonb
+- **costinsolana**: numeric(10, 6)
+- **solanatxnhash**: text
+
+---
+### agents
+- **agentid**: uuid
+- **agentname**: text
+- **description**: text
+- **api_endpoint**: text
+- **pricingmodel**: text
+- **costperunit**: numeric(10, 6)
+- **ownerwalletaddress**: text
+- **isrentable**: boolean
+
+---
+### ai_insights
+- **id**: uuid
+- **session_id**: uuid
+- **user_id**: text
+- **insight_type**: text
+- **insight_text**: text
+- **confidence_score**: numeric(3, 2)
+- **metadata**: jsonb
+- **created_at**: timestamp with time zone
+
+---
+### analysis_sessions
+- **id**: uuid
+- **user_id**: character varying(255)
+- **goal_text**: text
+- **session_type**: character varying(50)
+- **status**: character varying(20)
+- **created_at**: timestamp with time zone
+- **updated_at**: timestamp with time zone
+
+---
+### assets
+- **assetid**: uuid
+- **ticker**: text
+- **assetname**: text
+- **assettype**: text
+- **isoptional**: boolean
+- **description**: text
+
+---
+### dashboard_macro_data
+- **id**: serial
+- **indicator_code**: character varying(50)
+- **indicator_name**: character varying(255)
+- **value**: numeric(15, 4)
+- **date**: date
+- **frequency**: character varying(20)
+- **units**: character varying(100)
+- **source**: character varying(50)
+- **category**: character varying(100)
+- **subcategory**: character varying(100)
+- **seasonally_adjusted**: boolean
+- **revision_date**: timestamp without time zone
+- **metadata**: jsonb
+- **created_at**: timestamp with time zone
+- **updated_at**: timestamp with time zone
+
+---
+### dashboard_market_data
+- **id**: uuid
+- **symbol**: character varying(10)
+- **name**: character varying(100)
+- **asset_type**: character varying(20)
+- **price**: numeric(12, 4)
+- **previous_close**: numeric(12, 4)
+- **change_value**: numeric(12, 4)
+- **change_percent**: numeric(8, 4)
+- **volume**: bigint
+- **market_cap**: bigint
+- **pe_ratio**: numeric(8, 2)
+- **dividend_yield**: numeric(6, 4)
+- **day_high**: numeric(12, 4)
+- **day_low**: numeric(12, 4)
+- **year_high**: numeric(12, 4)
+- **year_low**: numeric(12, 4)
+- **expense_ratio**: numeric(6, 4)
+- **total_assets**: bigint
+- **beta**: numeric(6, 3)
+- **sma_20**: numeric(12, 4)
+- **sma_50**: numeric(12, 4)
+- **sma_200**: numeric(12, 4)
+- **rsi**: numeric(6, 2)
+- **context_data**: jsonb
+- **data_timestamp**: timestamp with time zone
+- **created_at**: timestamp with time zone
+- **updated_at**: timestamp with time zone
+
+---
+### explainability_analysis
+- **id**: uuid
+- **recommendation_id**: uuid
+- **agent_type**: character varying(50)
+- **original_query**: text
+- **recommendation_summary**: text
+- **explanation_text**: text
+- **confidence_score**: numeric(5, 4)
+- **reasoning_steps**: jsonb
+- **risk_factors**: jsonb
+- **assumptions**: jsonb
+- **alternative_scenarios**: jsonb
+- **data_sources**: jsonb
+- **methodology**: character varying(100)
+- **limitations**: text
+- **user_feedback**: jsonb
+- **follow_up_questions**: jsonb
+- **complexity_level**: character varying(20)
+- **explanation_type**: character varying(50)
+- **created_at**: timestamp with time zone
+- **updated_at**: timestamp with time zone
+- **session_id**: uuid
+- **user_id**: text
+- **main_explanation**: text
+- **risk_framework**: text
+- **return_expectations**: text
+- **monitoring_approach**: text
+- **word_count**: integer
+- **theoretical_framework**: text
+- **explanation_metadata**: text
+- **explanation_summary**: jsonb
+- **components**: jsonb
+- **quality_metrics**: jsonb
+
+---
+### investment_plans
+- **id**: uuid
+- **user_id**: uuid
+- **financial_goals**: text
+- **investment_preferences**: text
+- **plan_data**: jsonb
+- **plan_name**: character varying(255)
+- **plan_type**: character varying(50)
+- **risk_level**: character varying(20)
+- **time_horizon**: integer
+- **target_amount**: numeric(15, 2)
+- **agent_2_data**: jsonb
+- **agent_3_data**: jsonb
+- **processing_status**: character varying(20)
+- **is_active**: boolean
+- **is_favorite**: boolean
+- **created_at**: timestamp with time zone
+- **updated_at**: timestamp with time zone
+- **last_reviewed_at**: timestamp with time zone
+- **expected_return**: numeric(8, 4)
+- **actual_return**: numeric(8, 4)
+- **performance_notes**: text
+
+---
+### market_events
+- **eventid**: uuid
+- **eventname**: text
+- **startdate**: date
+- **enddate**: date
+- **description**: text
+
+---
+### market_time_series
+- **datapointid**: uuid
+- **date**: timestamp without time zone
+- **assetid**: uuid
+- **metricname**: text
+- **value**: numeric
+- **datasource**: text
+
+---
+### monte_carlo_results
+- **id**: uuid
+- **planner_id**: uuid
+- **scenario**: character varying(50)
+- **success_probability**: numeric(4, 3)
+- **expected_final_value**: numeric(15, 2)
+- **percentile_10**: numeric(15, 2)
+- **percentile_50**: numeric(15, 2)
+- **percentile_90**: numeric(15, 2)
+- **shortfall_risk**: numeric(4, 3)
+- **excess_probability**: numeric(4, 3)
+- **required_monthly_savings**: numeric(10, 2)
+- **confidence_interval_lower**: numeric(15, 2)
+- **confidence_interval_upper**: numeric(15, 2)
+- **created_at**: timestamp with time zone
+
+---
+### planner_analysis
+- **id**: uuid
+- **session_id**: uuid
+- **user_id**: character varying(255)
+- **goal_type**: character varying(50)
+- **target_amount**: numeric(15, 2)
+- **time_horizon_years**: integer
+- **current_age**: integer
+- **risk_tolerance**: character varying(50)
+- **monthly_investment**: numeric(10, 2)
+- **success_probability**: numeric(4, 3)
+- **expected_final_value**: numeric(15, 2)
+- **goal_summary**: text
+- **asset_allocation**: jsonb
+- **risk_considerations**: jsonb
+- **milestones**: jsonb
+- **alternative_scenarios**: jsonb
+- **stress_test_summary**: text
+- **created_at**: timestamp with time zone
+
+---
+### planner_rules
+- **ruleid**: uuid
+- **rulename**: text
+- **ruletype**: text
+- **conditions**: jsonb
+- **actionallocations**: jsonb
+- **explanationtemplate**: text
+
+---
+### portfolio_analysis
+- **id**: uuid
+- **session_id**: uuid
+- **user_id**: character varying(255)
+- **risk_level**: integer
+- **allocations**: jsonb
+- **expected_return**: numeric(5, 4)
+- **expected_risk**: numeric(5, 4)
+- **sharpe_ratio**: numeric(6, 4)
+- **portfolio_value**: numeric(15, 2)
+- **created_at**: timestamp with time zone
+
+---
+### portfolio_performance_metrics
+- **performancerecordid**: uuid
+- **userportfolioid**: uuid
+- **date**: date
+- **sharperatio**: numeric(5, 2)
+- **sortinoratio**: numeric(5, 2)
+- **maxdrawdown**: numeric(5, 2)
+- **turnover**: numeric(5, 2)
+- **winrate**: numeric(5, 2)
+- **informationratio**: numeric(5, 2)
+- **cagr**: numeric(5, 2)
+- **volatility**: numeric(5, 2)
+- **returnduringcrash**: numeric(5, 2)
+- **recoverytimedays**: integer
+
+---
+### rebalancing_triggers
+- **id**: uuid
+- **portfolio_id**: uuid
+- **trigger_name**: character varying(100)
+- **condition_met**: boolean
+- **trigger_value**: numeric(8, 6)
+- **threshold**: numeric(8, 6)
+- **confidence**: numeric(4, 3)
+- **urgency**: character varying(20)
+- **recommended_action**: text
+- **expected_impact**: numeric(6, 4)
+- **created_at**: timestamp with time zone
+
+---
+### recommendation_explanations
+- **id**: uuid
+- **session_id**: uuid
+- **user_id**: text
+- **recommendation_type**: text
+- **explanation_text**: text
+- **rationale**: text
+- **metadata**: jsonb
+- **created_at**: timestamp with time zone
+
+---
+### risk_tiers
+- **risktierid**: integer
+- **riskname**: text
+- **profiledescription**: text
+- **investmenthorizon**: text
+- **expectedreturn**: numeric(5, 4)
+- **volatility**: numeric(5, 4)
+- **sharperatio**: numeric(5, 2)
+- **targetallocations**: jsonb
+
+---
+### signal_rules
+- **signalid**: uuid
+- **signalname**: text
+- **description**: text
+- **frequency**: text
+- **conditiontrigger**: jsonb
+- **action**: jsonb
+- **applicablerisktiers**: text
+- **cooldownperioddays**: integer
+- **reversalcondition**: jsonb
+
+---
+### stress_tests
+- **id**: uuid
+- **portfolio_id**: uuid
+- **scenario**: character varying(50)
+- **portfolio_loss**: numeric(6, 4)
+- **worst_asset_loss**: numeric(6, 4)
+- **recovery_time_estimate**: integer
+- **risk_adjusted_return**: numeric(6, 4)
+- **max_drawdown**: numeric(6, 4)
+- **var_95**: numeric(6, 4)
+- **expected_shortfall**: numeric(6, 4)
+- **stress_ratio**: numeric(6, 4)
+- **created_at**: timestamp with time zone
+
+---
+### transaction_logs
+- **logid**: uuid
+- **userportfolioid**: uuid
+- **timestamp**: timestamp with time zone
+- **actiontype**: text
+- **assetid**: uuid
+- **quantity**: numeric(15, 6)
+- **price**: numeric(10, 2)
+- **amount**: numeric(12, 2)
+- **reason**: text
+- **signalid**: uuid
+- **issimulated**: boolean
+- **alpacaorderid**: text
+
+---
+### user_dashboard_settings
+- **id**: uuid
+- **user_id**: uuid
+- **watchlist_symbols**: text[]
+- **preferred_charts**: jsonb
+- **refresh_interval**: integer
+- **theme**: character varying(20)
+- **layout_config**: jsonb
+- **created_at**: timestamp with time zone
+- **updated_at**: timestamp with time zone
+
+---
+### user_goals
+- **goalid**: uuid
+- **userid**: uuid
+- **goaldescription**: text
+- **goaltype**: text
+- **targetamount**: numeric(12, 2)
+- **targetdate**: date
+- **currentsavings**: numeric(12, 2)
+- **assignedrisktierid**: integer
+- **experience**: text
+
+---
+### user_portfolio_holdings
+- **holdingid**: uuid
+- **userportfolioid**: uuid
+- **assetid**: uuid
+- **currentallocationpercentage**: numeric(5, 2)
+- **targetallocationpercentage**: numeric(5, 2)
+- **numberofunits**: numeric(15, 6)
+- **averagecostbasis**: numeric(10, 2)
+- **currentvalue**: numeric(12, 2)
+
+---
+### user_portfolios
+- **userportfolioid**: uuid
+- **userid**: uuid
+- **goalid**: uuid
+- **portfolioname**: text
+- **currentrisktierid**: integer
+- **creationdate**: date
+- **lastrebalancedate**: date
+- **currenttotalvalue**: numeric(12, 2)
+
+---
+### user_preferences
+- **preferences_id**: uuid
+- **user_id**: uuid
+- **primary_goal**: text
+- **investment_horizon**: text
+- **experience_level**: text
+- **risk_tolerance**: integer
+- **starting_amount**: numeric
+- **monthly_contribution**: numeric
+- **assets_to_avoid**: jsonb
+- **comfortable_assets**: jsonb
+- **auto_pay_amount**: numeric
+- **auto_pay_cadence**: text
+- **auto_pay_to_savings**: text
+- **budget_guardrail**: integer
+- **concentration_cap**: integer
+- **consent_to_automation**: boolean
+- **contribution_day**: integer
+- **create_auto_split**: text
+- **dca_cadence**: text
+- **equity_stop_loss**: integer
+- **equity_take_profit**: integer
+- **margin_allowed**: boolean
+- **max_drawdown**: integer
+- **portfolio_drawdown_alert**: integer
+- **rebalancing**: text
+- **sector_caps**: jsonb
+- **split_recipe**: jsonb
+- **state_of_residence**: text
+- **tax_wrapper**: text
+- **created_at**: timestamp with time zone
+- **updated_at**: timestamp with time zone
