@@ -1,6 +1,8 @@
 services:
   - type: web
-    name: neural-capital-api
+    name: neural-cap      # CORS for Vercel and Netlify deployments
+      - key: BACKEND_CORS_ORIGINS
+        value: '[\"https://*.vercel.app\", \"https://*.netlify.app\", \"https://*.netlify.com\", \"http://localhost:3000\", \"http://localhost:5173\"]'l-api
     runtime: python3
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT --workers 1
