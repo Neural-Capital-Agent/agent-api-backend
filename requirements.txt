@@ -1,4 +1,5 @@
 annotated-types
+anchorpy>=0.20.0
 anyio
 beautifulsoup4
 click
@@ -8,7 +9,6 @@ curl-cffi
 datetime>=5.5
 email-validator
 fastapi
-# schedule>=1.2.0  # Removed - using manual refresh only
 fastapi-cache2
 httpx
 httpx-sse
@@ -25,6 +25,8 @@ postgrest
 pydantic
 pydantic-settings
 pyjwt
+pytest>=8.4.2
+pytest-asyncio>=1.2.0
 python-dateutil
 python-dotenv
 python-multipart
@@ -32,13 +34,14 @@ pyyaml
 requests
 rich
 sentry-sdk
+setuptools>=61.0
+solana>=0.34.0
+solders>=0.21.0
 sse-starlette
 starlette
 storage3
 supabase
 typer
 uvicorn[standard]
+wheel
 yfinance
-solana>=0.34.0
-solders>=0.21.0
-anchorpy>=0.20.0

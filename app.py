@@ -12,10 +12,9 @@ from fastapi_cache.backends.inmemory import InMemoryBackend
 import logging
 import time
 from datetime import datetime
-from dotenv import load_dotenv
+import os
 
-# Load environment variables from .env file
-load_dotenv()
+# Environment variables will be provided by Render - no .env loading needed in production
 
 from api.api import api_router
 # from api.middleware.rate_limiting import RateLimitMiddleware, LLMUsageMiddleware  # Commented out to fix 429 errors
@@ -140,6 +139,8 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 async def startup():
     """Initialize the API cache, rate limiting, and agents on startup."""
     try:
+        # Track startup time for health checks
+        app.startup_time = time.time()
         # Initialize cache
         FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
         logger.info("[OK] FastAPI cache initialized")
@@ -171,11 +172,12 @@ async def startup():
             
             # Test if server is responding
             import httpx
+            coral_url = os.getenv('CORAL_SERVER_URL', 'http://localhost:5555')
             try:
                 async with httpx.AsyncClient() as client:
-                    health_response = await client.get("http://localhost:5555/health", timeout=5.0)
+                    health_response = await client.get(f"{coral_url}/health", timeout=5.0)
                     if health_response.status_code == 200:
-                        logger.info("[OK] Coral Protocol Server started on http://localhost:5555")
+                        logger.info(f"[OK] Coral Protocol Server started on {coral_url}")
                     else:
                         logger.warning(f"[WARNING] Coral Server health check failed: {health_response.status_code}")
             except Exception as health_error:
@@ -225,9 +227,11 @@ async def startup():
 
         # Log startup completion
         logger.info("[STARTING] Neural Capital Financial Agents API started successfully")
-        logger.info(f"[DATA] API Documentation: http://localhost:8000/docs")
-        logger.info(f"[DOCS] ReDoc: http://localhost:8000/redoc")
-        logger.info(f"[CORAL] Coral Protocol Server: http://localhost:5555/health")
+        api_base = os.getenv('CORAL_API_BASE_URL', 'http://localhost:8000')
+        coral_url = os.getenv('CORAL_SERVER_URL', 'http://localhost:5555')
+        logger.info(f"[DATA] API Documentation: {api_base}/docs")
+        logger.info(f"[DOCS] ReDoc: {api_base}/redoc")
+        logger.info(f"[CORAL] Coral Protocol Server: {coral_url}/health")
 
     except Exception as e:
         logger.error(f"[ERROR] Startup failed: {e}")
@@ -365,7 +369,7 @@ async def system_health():
 
         # Check CrewAI system
         try:
-            from agent.coral.crew_agents import crew_manager
+            from agent.crew.simple_crew import crew_manager
             crew_status = crew_manager.get_crew_status()
             health_status["components"]["crewai"] = {
                 "status": "healthy" if crew_status.get("status") == "ready" else "unhealthy",
@@ -518,17 +522,6 @@ async def api_info():
             "integration_protocols": 2
         },
         "timestamp": datetime.now().isoformat()
-    }
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for monitoring and load balancers."""
-    return {
-        "status": "healthy",
-        "service": "Neural Capital API",
-        "version": "1.0.0",
-        "timestamp": datetime.now().isoformat(),
-        "uptime": time.time() - app.startup_time if hasattr(app, 'startup_time') else None
     }
 
 if __name__ == "__main__":

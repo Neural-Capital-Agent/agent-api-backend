@@ -11,20 +11,42 @@ services:
         value: Neural Capital API
       - key: DEBUG
         value: false
+      - key: ENVIRONMENT
+        value: production
       - key: SECRET_KEY
         generateValue: true
+      # Supabase Configuration
       - key: URL_SUPABASE
         sync: false
       - key: KEY_SUPABASE
         sync: false
+      # Trading APIs
       - key: API_KEY_ALPACA
         sync: false
       - key: API_SECRET_ALPACA
         sync: false
+      - key: URL_ALPACA
+        value: broker-api.sandbox.alpaca.markets
+      # Market Data APIs
       - key: POLYGON_API_KEY
         sync: false
+      - key: FRED_API_KEY
+        sync: false
+      - key: FRED_KEY
+        sync: false
+      - key: URL_FRED
+        value: https://api.stlouisfed.org/fred
+      # AI/ML API
+      - key: AI_ML_API_KEY
+        sync: false
+      # Coral Protocol (will use cloud URLs)
+      - key: CORAL_SERVER_URL
+        value: https://neural-capital-api.onrender.com
+      - key: CORAL_API_BASE_URL
+        value: https://neural-capital-api.onrender.com
+      # CORS for Netlify (allows all subdomains)
       - key: BACKEND_CORS_ORIGINS
-        value: '["https://your-frontend-domain.com"]'
+        value: '["https://*.netlify.app", "https://*.netlify.com", "http://localhost:3000", "http://localhost:5173"]'
     healthCheckPath: /health
     plan: starter
     autoDeploy: false
