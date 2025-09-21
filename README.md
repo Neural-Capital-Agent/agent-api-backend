@@ -1,5 +1,10 @@
 # Neural Capital Financial Agents API
 
+### Frontend Repo: https://github.com/Neural-Capital-Agent/frontend_neural
+
+### Backend Repo: https://github.com/Neural-Capital-Agent/agent-api-backend
+
+
 A comprehensive FastAPI-based backend service for financial data, AI-powered portfolio management, and multi-agent financial advisory through Coral Protocol integration.
 
 ## 🌊 Coral Protocol Integration
