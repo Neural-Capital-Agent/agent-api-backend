@@ -17,14 +17,15 @@ logger = logging.getLogger(__name__)
 # Configure AI/ML API key for CrewAI (maps to OpenAI)
 ai_ml_api_key = os.getenv('AI_ML_API_KEY')
 if ai_ml_api_key:
-    os.environ['OPENAI_API_KEY'] = ai_ml_api_key
+    ##os.environ['OPENAI_API_KEY'] = ai_ml_api_key
+    os.environ['AIML_API_KEY'] = ai_ml_api_key
     logger.info("AI-ML-API-Key loaded and configured for CrewAI")
 else:
     logger.warning("AI-ML-API-Key not found in environment variables")
 
 # Try to import CrewAI, fallback to simple orchestrator if not available
 try:
-    from crewai import Agent, Task, Crew, Process
+    from crewai import Agent, Task, Crew, Process ,litellm
     from crewai.tools import BaseTool
     from pydantic import BaseModel, Field
     CREWAI_AVAILABLE = True
@@ -129,7 +130,7 @@ if CREWAI_AVAILABLE:
             timely market data and analysis to support investment decisions.""",
             tools=[market_tool],
             verbose=True,
-            allow_delegation=False
+            allow_delegation=False,
         )
 
         # Portfolio Manager Agent
