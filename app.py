@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from api.api import api_router
-from api.middleware.rate_limiting import RateLimitMiddleware, LLMUsageMiddleware
+# from api.middleware.rate_limiting import RateLimitMiddleware, LLMUsageMiddleware  # Commented out to fix 429 errors
 from core.config import settings
 
 # Scheduler removed per user request
@@ -166,10 +166,21 @@ async def startup():
             # Start the coral server in the background
             asyncio.create_task(coral_server.start_server())
 
-            # Give the server a moment to start
-            await asyncio.sleep(2)
-
-            logger.info("[OK] Coral Protocol Server started on http://localhost:5555")
+            # Give the server more time to start and verify it's ready
+            await asyncio.sleep(3)
+            
+            # Test if server is responding
+            import httpx
+            try:
+                async with httpx.AsyncClient() as client:
+                    health_response = await client.get("http://localhost:5555/health", timeout=5.0)
+                    if health_response.status_code == 200:
+                        logger.info("[OK] Coral Protocol Server started on http://localhost:5555")
+                    else:
+                        logger.warning(f"[WARNING] Coral Server health check failed: {health_response.status_code}")
+            except Exception as health_error:
+                logger.warning(f"[WARNING] Coral Server health check failed: {health_error}")
+                logger.info("[NOTE] Continuing without Coral Protocol Server health verification")
 
         except Exception as coral_server_error:
             logger.error(f"[WARNING] Coral Protocol Server startup failed: {coral_server_error}")
@@ -177,7 +188,7 @@ async def startup():
 
         # Initialize CrewAI
         try:
-            from agent.coral.crew_agents import crew_manager
+            from agent.crew.simple_crew import crew_manager
             crew_status = crew_manager.get_crew_status()
             logger.info(f"[AI] CrewAI initialized with {crew_status['crew_size']} agents")
             logger.info(f"[TARGET] CrewAI workflows available at /api/v1/crew/")
@@ -191,7 +202,7 @@ async def startup():
             logger.info("[CORAL] Initializing Coral Protocol integration...")
 
             # Give Coral Server more time to be ready
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
 
             # Register agents with Coral Server for Studio visibility
             registration_results = await coral_registry.register_all_agents()
