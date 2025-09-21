@@ -121,3 +121,24 @@ async def create_plan(
             status_code=500,
             detail={"error": "plan_creation_failed", "message": str(e)}
         )
+
+
+@router.get("/health")
+async def planner_agent_health():
+    """Check Planner Agent health and goal processing capabilities."""
+    try:
+        health_status = await planner_agent.health_check() if hasattr(planner_agent, 'health_check') else {"status": "healthy"}
+        return {
+            "agent": "planner_agent",
+            "status": "healthy",
+            "goal_processing": health_status,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Planner agent health check failed: {e}")
+        return {
+            "agent": "planner_agent",
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }

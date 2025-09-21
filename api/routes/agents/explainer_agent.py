@@ -233,3 +233,25 @@ async def get_word_limit(
             status_code=500,
             detail={"error": "word_limit_get_failed", "message": str(e)}
         )
+
+
+@router.get("/health")
+async def explainer_agent_health():
+    """Check Explainer Agent health and explanation capabilities."""
+    try:
+        health_status = await explainer_agent.health_check() if hasattr(explainer_agent, 'health_check') else {"status": "healthy"}
+        return {
+            "agent": "explainability_agent",
+            "status": "healthy",
+            "explanation_engine": health_status,
+            "current_word_limit": explainer_agent.default_word_limit,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Explainer agent health check failed: {e}")
+        return {
+            "agent": "explainability_agent",
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }

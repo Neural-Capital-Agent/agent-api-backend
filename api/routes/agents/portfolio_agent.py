@@ -69,3 +69,24 @@ async def calculate_rebalancing(
             status_code=500,
             detail={"error": "rebalancing_failed", "message": str(e)}
         )
+
+
+@router.get("/health")
+async def portfolio_agent_health():
+    """Check Portfolio Agent health and optimization engine availability."""
+    try:
+        health_status = await portfolio_agent.health_check() if hasattr(portfolio_agent, 'health_check') else {"status": "healthy"}
+        return {
+            "agent": "portfolio_agent",
+            "status": "healthy",
+            "optimization_engine": health_status,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Portfolio agent health check failed: {e}")
+        return {
+            "agent": "portfolio_agent",
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
