@@ -1,6 +1,7 @@
 """
 Rate limiting utilities for LLM usage and API endpoints.
 Supports multiple strategies: in-memory, user-based, and token bucket algorithms.
+TEMPORARILY DISABLED FOR DEBUGGING - All rate limiting bypassed.
 """
 
 import time
@@ -12,8 +13,12 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from enum import Enum
 from fastapi import HTTPException
+from functools import wraps
 
 logger = logging.getLogger(__name__)
+
+# Global flag to disable all rate limiting
+RATE_LIMITING_DISABLED = True
 
 
 class RateLimitStrategy(Enum):
@@ -301,6 +306,9 @@ def rate_limit_decorator(
     """
     def decorator(func):
         async def wrapper(*args, **kwargs):
+            # Bypass rate limiting if disabled
+            if RATE_LIMITING_DISABLED:
+                return await func(*args, **kwargs)
             # Extract user_id from kwargs or first arg
             user_id = kwargs.get('user_id')
             if not user_id and args:
@@ -374,5 +382,12 @@ async def setup_user_tier(user_id: str, tier: str = "basic"):
 
 # Convenience decorator for easy use in routes
 def rate_limit(cost: int = 1, endpoint: str = "api"):
-    """Simplified rate limit decorator for route endpoints"""
+    """Simplified rate limit decorator for route endpoints - BYPASSED"""
+    if RATE_LIMITING_DISABLED:
+        def bypass_decorator(func):
+            @wraps(func)
+            async def wrapper(*args, **kwargs):
+                return await func(*args, **kwargs)
+            return wrapper
+        return bypass_decorator
     return rate_limit_decorator(llm_rate_limiter, endpoint=endpoint, cost=cost)

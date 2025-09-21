@@ -560,7 +560,7 @@ async def main():
         # json_read_write("temp_storage/macro_data.json", "w", macro_data)
         # json_read_write("temp_storage/validation_result.json", "w", validation_result)
 
-        # # Step 2: Portfolio Optimization (load data from temp_storage) [AGENT 2 - PORTFOLIO AGENT]
+        # Step 2: Portfolio Optimization (load data from temp_storage) [AGENT 2 - PORTFOLIO AGENT]
         # market_data = json_read_write("temp_storage/market_data.json", "r")
         # macro_data = json_read_write("temp_storage/macro_data.json", "r")
         # validation_result = json_read_write("temp_storage/validation_result.json", "r")
