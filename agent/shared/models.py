@@ -97,6 +97,7 @@ class GoalType(Enum):
     EMERGENCY_FUND = "emergency_fund"
     CHILD_EDUCATION = "child_education"
     EDUCATION = "education"  # Add this for test compatibility
+    GENERAL_SAVINGS = "general_savings"  # Add this missing value
 
 @dataclass
 class GoalParameters:
@@ -106,6 +107,7 @@ class GoalParameters:
     current_age: Optional[int] = None
     retirement_age: Optional[int] = None
     risk_tolerance: Optional[RiskLevel] = None
+    monthly_investment: Optional[float] = None  # Add monthly investment field
 
 @dataclass
 class UserProfile:
