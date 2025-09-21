@@ -2,9 +2,20 @@ import asyncio
 import httpx
 import json
 import logging
+import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import hashlib
+from pathlib import Path
+
+# Coral v01 SDK imports
+try:
+    from coral_sdk import CoralClient as OfficialCoralClient, CoralAgent
+    from coral_sdk.types import AgentRegistration as SDKAgentRegistration
+    CORAL_SDK_AVAILABLE = True
+except ImportError:
+    CORAL_SDK_AVAILABLE = False
+    logging.warning("Coral SDK not available, using fallback implementation")
 
 try:
     from ..shared.models import CoralMessage, CoralResponse, AgentRegistration
@@ -15,7 +26,6 @@ except ImportError:
     try:
         from agent.clients.mistral_client import mistral_client
     except ImportError:
-        logger.warning("Mistral client not available")
         mistral_client = None
 
 logger = logging.getLogger(__name__)
@@ -24,6 +34,7 @@ class CoralClient:
     """
     Client for interacting with Coral Protocol infrastructure.
     Handles agent-to-agent communication, payments, and verification.
+    Uses official Coral v01 SDK when available, falls back to custom implementation.
     """
 
     def __init__(self, coral_server_url: str = "http://localhost:5555", agent_id: str = None):
@@ -31,6 +42,22 @@ class CoralClient:
         self.agent_id = agent_id
         self.client: Optional[httpx.AsyncClient] = None
         self.registered_agents: Dict[str, AgentRegistration] = {}
+        self.wallet_config = self._load_wallet_config()
+        self.marketplace_api_url = self._get_marketplace_api_url()
+
+        # Initialize official Coral SDK if available
+        if CORAL_SDK_AVAILABLE:
+            try:
+                self.coral_sdk_client = OfficialCoralClient(
+                    server_url=coral_server_url,
+                    agent_id=agent_id
+                )
+                logger.info(f"Initialized Coral v01 SDK client for agent {agent_id}")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Coral SDK client: {e}, using fallback")
+                self.coral_sdk_client = None
+        else:
+            self.coral_sdk_client = None
 
     async def __aenter__(self):
         self.client = httpx.AsyncClient()
@@ -58,6 +85,42 @@ class CoralClient:
             True if registration successful
         """
         try:
+            # Use official Coral SDK if available
+            if self.coral_sdk_client:
+                try:
+                    logger.info(f"Registering agent {self.agent_id} using Coral v01 SDK")
+
+                    # Create SDK registration object
+                    sdk_registration = SDKAgentRegistration(
+                        agent_id=self.agent_id,
+                        agent_type=agent_type,
+                        capabilities=capabilities,
+                        endpoint=endpoint
+                    )
+
+                    # Register using official SDK
+                    result = await self.coral_sdk_client.register_agent(sdk_registration)
+
+                    if result:
+                        logger.info(f"[OK] Successfully registered {self.agent_id} with Coral v01 SDK")
+
+                        # Store in local registry too
+                        self.registered_agents[self.agent_id] = AgentRegistration(
+                            agent_id=self.agent_id,
+                            agent_type=agent_type,
+                            capabilities=capabilities,
+                            endpoint=endpoint
+                        )
+                        return True
+                    else:
+                        logger.error("Coral SDK registration failed")
+                        return False
+
+                except Exception as sdk_error:
+                    logger.warning(f"Coral SDK registration failed: {sdk_error}, falling back to direct registration")
+                    # Fall through to legacy implementation
+
+            # Fallback to direct registration
             await self._ensure_client()
 
             registration_data = {
@@ -67,7 +130,7 @@ class CoralClient:
                 "endpoint": endpoint
             }
 
-            logger.info(f"Attempting to register agent {self.agent_id} with Coral Protocol")
+            logger.info(f"Attempting to register agent {self.agent_id} with Coral Protocol (direct)")
             logger.info(f"Agent type: {agent_type}, Capabilities: {capabilities}")
 
             # Only register if we have a valid agent_id
@@ -749,6 +812,262 @@ class CoralClient:
         except Exception as e:
             logger.error(f"Network health check failed: {e}")
             return {"error": str(e), "network_health_score": 0.0}
+
+    # =============================================================================
+    # CORAL PROTOCOL MARKETPLACE INTEGRATION
+    # =============================================================================
+
+    def _load_wallet_config(self) -> Optional[Dict[str, Any]]:
+        """Load wallet configuration from ~/.coral/wallet.toml"""
+        try:
+            wallet_path = Path.home() / ".coral" / "wallet.toml"
+            if wallet_path.exists():
+                import toml
+                return toml.load(wallet_path)
+            return None
+        except Exception as e:
+            logger.warning(f"Could not load wallet config: {e}")
+            return None
+
+    def _get_marketplace_api_url(self) -> str:
+        """Get the marketplace API URL from environment or default"""
+        return os.getenv("CORAL_MARKETPLACE_API_URL", "https://api.coralprotocol.org")
+
+    async def register_agent_marketplace(self, agent_config_path: str) -> bool:
+        """
+        Register agent with Coral Protocol marketplace.
+        
+        Args:
+            agent_config_path: Path to coral-agent.toml configuration file
+            
+        Returns:
+            True if registration successful
+        """
+        try:
+            await self._ensure_client()
+            
+            # Load agent configuration
+            import toml
+            config_path = Path(agent_config_path)
+            if not config_path.exists():
+                logger.error(f"Agent config file not found: {agent_config_path}")
+                return False
+                
+            agent_config = toml.load(config_path)
+            
+            # Prepare marketplace registration data
+            registration_data = {
+                "agent": agent_config.get("agent", {}),
+                "options": agent_config.get("options", {}),
+                "runtimes": agent_config.get("runtimes", {}),
+                "wallet_address": self.wallet_config.get("wallet_address") if self.wallet_config else None,
+                "publisher_info": {
+                    "publisher": "Neural Capital",
+                    "email": "hello@neural-capital.com",
+                    "website": "https://neural-capital.com"
+                }
+            }
+            
+            logger.info(f"Registering agent {agent_config['agent']['name']} with marketplace")
+            
+            response = await self.client.post(
+                f"{self.marketplace_api_url}/api/v1/agents/register",
+                json=registration_data,
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                agent_id = result.get("agent_id")
+                logger.info(f"Successfully registered agent {agent_id} with marketplace")
+                return True
+            else:
+                logger.error(f"Marketplace registration failed: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to register agent with marketplace: {e}")
+            return False
+
+    async def claim_payment(self, remote_session_id: str, amount: float, currency: str = "coral") -> bool:
+        """
+        Claim payment for agent usage in Coral Protocol.
+        
+        Args:
+            remote_session_id: Session ID from agent usage
+            amount: Amount to claim
+            currency: Currency type (default: "coral")
+            
+        Returns:
+            True if payment claim successful
+        """
+        try:
+            await self._ensure_client()
+            
+            claim_data = {
+                "amount": {
+                    "type": currency,
+                    "amount": amount
+                }
+            }
+            
+            # Get CORAL_API_URL from environment (set by coral server)
+            coral_api_url = os.getenv("CORAL_API_URL", self.coral_server_url)
+            
+            response = await self.client.post(
+                f"{coral_api_url}/api/v1/internal/claim/{remote_session_id}",
+                json=claim_data,
+                headers={"Content-Type": "application/json"},
+                timeout=10.0
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Successfully claimed payment: {amount} {currency}")
+                return True
+            else:
+                logger.error(f"Payment claim failed: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to claim payment: {e}")
+            return False
+
+    async def get_marketplace_agents(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Discover agents available on the Coral Protocol marketplace.
+        
+        Args:
+            category: Optional category filter (e.g., "Financial Services")
+            
+        Returns:
+            List of available marketplace agents
+        """
+        try:
+            await self._ensure_client()
+            
+            params = {}
+            if category:
+                params["category"] = category
+                
+            response = await self.client.get(
+                f"{self.marketplace_api_url}/api/v1/agents",
+                params=params,
+                timeout=10.0
+            )
+            
+            if response.status_code == 200:
+                agents = response.json().get("agents", [])
+                logger.info(f"Found {len(agents)} agents in marketplace")
+                return agents
+            else:
+                logger.error(f"Failed to fetch marketplace agents: {response.status_code}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Failed to get marketplace agents: {e}")
+            return []
+
+    async def purchase_agent_access(self, agent_id: str, tier: str = "basic") -> Optional[str]:
+        """
+        Purchase access to an agent on the marketplace.
+        
+        Args:
+            agent_id: ID of the agent to purchase
+            tier: Service tier (basic, premium, enterprise)
+            
+        Returns:
+            Access token if successful, None otherwise
+        """
+        try:
+            await self._ensure_client()
+            
+            purchase_data = {
+                "agent_id": agent_id,
+                "tier": tier,
+                "wallet_address": self.wallet_config.get("wallet_address") if self.wallet_config else None
+            }
+            
+            response = await self.client.post(
+                f"{self.marketplace_api_url}/api/v1/agents/{agent_id}/purchase",
+                json=purchase_data,
+                timeout=15.0
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                access_token = result.get("access_token")
+                logger.info(f"Successfully purchased access to agent {agent_id}")
+                return access_token
+            else:
+                logger.error(f"Failed to purchase agent access: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to purchase agent access: {e}")
+            return None
+
+    async def get_agent_earnings(self, agent_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get earnings information for agent(s).
+        
+        Args:
+            agent_id: Specific agent ID, or None for all owned agents
+            
+        Returns:
+            Earnings information
+        """
+        try:
+            await self._ensure_client()
+            
+            agent_id = agent_id or self.agent_id
+            
+            response = await self.client.get(
+                f"{self.marketplace_api_url}/api/v1/agents/{agent_id}/earnings",
+                timeout=10.0
+            )
+            
+            if response.status_code == 200:
+                earnings = response.json()
+                logger.info(f"Retrieved earnings for agent {agent_id}")
+                return earnings
+            else:
+                logger.error(f"Failed to get agent earnings: {response.status_code}")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Failed to get agent earnings: {e}")
+            return {}
+
+    async def update_agent_pricing(self, agent_id: str, pricing_config: Dict[str, Any]) -> bool:
+        """
+        Update pricing configuration for an agent on the marketplace.
+        
+        Args:
+            agent_id: Agent ID to update
+            pricing_config: New pricing configuration
+            
+        Returns:
+            True if update successful
+        """
+        try:
+            await self._ensure_client()
+            
+            response = await self.client.put(
+                f"{self.marketplace_api_url}/api/v1/agents/{agent_id}/pricing",
+                json=pricing_config,
+                timeout=10.0
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Successfully updated pricing for agent {agent_id}")
+                return True
+            else:
+                logger.error(f"Failed to update agent pricing: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to update agent pricing: {e}")
+            return False
 
 
 async def main():

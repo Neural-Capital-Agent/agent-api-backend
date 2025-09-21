@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # Neural Capital Data Agent
+  data-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.data-agent
+    image: neural-capital/data-agent:latest
+    container_name: neural-capital-data-agent
+    ports:
+      - "8000:8000"
+    environment:
+      - AGENT_TYPE=data_agent
+      - CORAL_PROTOCOL_ENABLED=true
+      - CORAL_SERVER_URL=http://coral-server:5555
+      - POLYGON_API_KEY=${POLYGON_API_KEY}
+      - FRED_API_KEY=${FRED_API_KEY}
+    networks:
+      - coral-network
+    depends_on:
+      - coral-server
+    restart: unless-stopped
+
+  # Neural Capital Portfolio Agent
+  portfolio-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.portfolio-agent
+    image: neural-capital/portfolio-agent:latest
+    container_name: neural-capital-portfolio-agent
+    ports:
+      - "8001:8001"
+    environment:
+      - AGENT_TYPE=portfolio_agent
+      - CORAL_PROTOCOL_ENABLED=true
+      - CORAL_SERVER_URL=http://coral-server:5555
+    networks:
+      - coral-network
+    depends_on:
+      - coral-server
+      - data-agent
+    restart: unless-stopped
+
+  # Neural Capital Explainability Agent
+  explainability-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.explainability-agent
+    image: neural-capital/explainability-agent:latest
+    container_name: neural-capital-explainability-agent
+    ports:
+      - "8002:8002"
+    environment:
+      - AGENT_TYPE=explainability_agent
+      - CORAL_PROTOCOL_ENABLED=true
+      - CORAL_SERVER_URL=http://coral-server:5555
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+    networks:
+      - coral-network
+    depends_on:
+      - coral-server
+    restart: unless-stopped
+
+  # Neural Capital Financial Planning Agent
+  planner-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.planner-agent
+    image: neural-capital/planner-agent:latest
+    container_name: neural-capital-planner-agent
+    ports:
+      - "8003:8003"
+    environment:
+      - AGENT_TYPE=planner_agent
+      - CORAL_PROTOCOL_ENABLED=true
+      - CORAL_SERVER_URL=http://coral-server:5555
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+    networks:
+      - coral-network
+    depends_on:
+      - coral-server
+    restart: unless-stopped
+
+  # Coral Protocol Server (Local Development)
+  coral-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: neural-capital/coral-server:latest
+    container_name: coral-protocol-server
+    ports:
+      - "5555:5555"
+    environment:
+      - SERVER_TYPE=coral_server
+      - CORAL_PROTOCOL_ENABLED=true
+    networks:
+      - coral-network
+    restart: unless-stopped
+
+networks:
+  coral-network:
+    driver: bridge
+    name: neural-capital-coral-network
+
+volumes:
+  coral-data:
+    name: neural-capital-coral-data

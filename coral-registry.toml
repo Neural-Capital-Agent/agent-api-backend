@@ -1,0 +1,221 @@
+# Neural Capital Agents - Coral Protocol Registry Configuration
+# This file defines the export settings, pricing, and marketplace configuration
+# for all Neural Capital AI agents on the Coral Protocol marketplace
+
+# =============================================================================
+# Data Agent Export Configuration
+# =============================================================================
+[local-agent.export.docker.neural-capital-data-agent]
+# Concurrent agent capacity
+quantity = 25
+
+# Pricing configuration (USD)
+pricing = { 
+    min_price = { type = "usd", amount = 2.00 }, 
+    max_price = { type = "usd", amount = 15.00 },
+    default_price = { type = "usd", amount = 5.00 }
+}
+
+# Pre-configured options for marketplace users
+options.DATA_REFRESH_INTERVAL = { type = "number", value = 5 }
+options.CACHE_DURATION = { type = "number", value = 15 }
+options.ENABLE_REAL_TIME = { type = "boolean", value = true }
+options.MAX_HISTORICAL_DAYS = { type = "number", value = 365 }
+
+# Service level configurations
+[local-agent.export.docker.neural-capital-data-agent.tiers]
+basic = { 
+    price = { type = "usd", amount = 2.00 },
+    equity_universe_limit = 10,
+    api_calls_per_hour = 100
+}
+premium = { 
+    price = { type = "usd", amount = 5.00 },
+    equity_universe_limit = 50,
+    api_calls_per_hour = 500
+}
+enterprise = { 
+    price = { type = "usd", amount = 15.00 },
+    equity_universe_limit = 1000,
+    api_calls_per_hour = 2000
+}
+
+# =============================================================================
+# Portfolio Agent Export Configuration
+# =============================================================================
+[local-agent.export.docker.neural-capital-portfolio-agent]
+# Concurrent agent capacity
+quantity = 15
+
+# Pricing configuration (USD)
+pricing = { 
+    min_price = { type = "usd", amount = 10.00 }, 
+    max_price = { type = "usd", amount = 50.00 },
+    default_price = { type = "usd", amount = 25.00 }
+}
+
+# Pre-configured options for marketplace users
+options.RISK_TOLERANCE = { type = "string", value = "moderate" }
+options.ENABLE_STRESS_TESTING = { type = "boolean", value = true }
+options.VAR_CONFIDENCE_LEVEL = { type = "number", value = 0.95 }
+options.OPTIMIZATION_METHOD = { type = "string", value = "mean_variance" }
+
+# Service level configurations
+[local-agent.export.docker.neural-capital-portfolio-agent.tiers]
+basic = { 
+    price = { type = "usd", amount = 10.00 },
+    max_portfolio_size = 100000,
+    stress_tests_per_month = 10
+}
+premium = { 
+    price = { type = "usd", amount = 25.00 },
+    max_portfolio_size = 1000000,
+    stress_tests_per_month = 100
+}
+enterprise = { 
+    price = { type = "usd", amount = 50.00 },
+    max_portfolio_size = 10000000,
+    stress_tests_per_month = 1000
+}
+
+# =============================================================================
+# Explainability Agent Export Configuration
+# =============================================================================
+[local-agent.export.docker.neural-capital-explainability-agent]
+# Concurrent agent capacity
+quantity = 20
+
+# Pricing configuration (USD)
+pricing = { 
+    min_price = { type = "usd", amount = 3.00 }, 
+    max_price = { type = "usd", amount = 20.00 },
+    default_price = { type = "usd", amount = 8.00 }
+}
+
+# Pre-configured options for marketplace users
+options.EXPLANATION_DEPTH = { type = "string", value = "detailed" }
+options.TECHNICAL_LEVEL = { type = "string", value = "intermediate" }
+options.INCLUDE_CHARTS = { type = "boolean", value = true }
+options.ENABLE_RISK_WARNINGS = { type = "boolean", value = true }
+
+# Service level configurations
+[local-agent.export.docker.neural-capital-explainability-agent.tiers]
+basic = { 
+    price = { type = "usd", amount = 3.00 },
+    explanations_per_hour = 50,
+    max_explanation_length = 300
+}
+premium = { 
+    price = { type = "usd", amount = 8.00 },
+    explanations_per_hour = 200,
+    max_explanation_length = 500
+}
+enterprise = { 
+    price = { type = "usd", amount = 20.00 },
+    explanations_per_hour = 1000,
+    max_explanation_length = 1000
+}
+
+# =============================================================================
+# Financial Planning Agent Export Configuration
+# =============================================================================
+[local-agent.export.docker.neural-capital-planner-agent]
+# Concurrent agent capacity
+quantity = 10
+
+# Pricing configuration (USD)
+pricing = { 
+    min_price = { type = "usd", amount = 15.00 }, 
+    max_price = { type = "usd", amount = 100.00 },
+    default_price = { type = "usd", amount = 40.00 }
+}
+
+# Pre-configured options for marketplace users
+options.PLANNING_HORIZON = { type = "number", value = 10 }
+options.ENABLE_MONTE_CARLO = { type = "boolean", value = true }
+options.SIMULATION_ITERATIONS = { type = "number", value = 1000 }
+options.GOAL_PRIORITIZATION = { type = "boolean", value = true }
+
+# Service level configurations
+[local-agent.export.docker.neural-capital-planner-agent.tiers]
+basic = { 
+    price = { type = "usd", amount = 15.00 },
+    financial_plans_per_month = 5,
+    max_planning_horizon = 10
+}
+premium = { 
+    price = { type = "usd", amount = 40.00 },
+    financial_plans_per_month = 25,
+    max_planning_horizon = 20
+}
+enterprise = { 
+    price = { type = "usd", amount = 100.00 },
+    financial_plans_per_month = 100,
+    max_planning_horizon = 30
+}
+
+# =============================================================================
+# Global Agent Bundle Configuration
+# =============================================================================
+[local-agent.export.docker.neural-capital-complete-suite]
+# Bundle all agents together at discounted rate
+quantity = 5
+
+# Bundle pricing (30% discount)
+pricing = { 
+    min_price = { type = "usd", amount = 60.00 }, 
+    max_price = { type = "usd", amount = 150.00 },
+    default_price = { type = "usd", amount = 90.00 }
+}
+
+# Include all agents in the bundle
+includes = [
+    "neural-capital-data-agent",
+    "neural-capital-portfolio-agent", 
+    "neural-capital-explainability-agent",
+    "neural-capital-planner-agent"
+]
+
+# =============================================================================
+# Coral Protocol Marketplace Metadata
+# =============================================================================
+[marketplace]
+publisher = "Neural Capital"
+publisher_email = "hello@neural-capital.com"
+website = "https://neural-capital.com"
+support_email = "support@neural-capital.com"
+documentation_url = "https://docs.neural-capital.com/coral-protocol"
+
+# Category and tags for marketplace discovery
+category = "Financial Services"
+tags = [
+    "finance", 
+    "investment", 
+    "portfolio-management", 
+    "risk-analysis", 
+    "financial-planning",
+    "ai-trading",
+    "market-data",
+    "explainable-ai"
+]
+
+# Compliance and certifications
+[marketplace.compliance]
+data_privacy = "GDPR, CCPA compliant"
+financial_regulations = "SEC, FINRA guidelines"
+security_standards = "SOC 2 Type II"
+
+# Regional availability
+[marketplace.regions]
+available = ["US", "EU", "UK", "CA", "AU"]
+restricted = ["CN", "RU"]
+
+# =============================================================================
+# Technical Requirements
+# =============================================================================
+[technical]
+minimum_memory = "2GB"
+recommended_memory = "4GB"
+cpu_requirements = "2 cores"
+network_requirements = "Stable internet for market data"
+storage_requirements = "1GB for historical data cache"

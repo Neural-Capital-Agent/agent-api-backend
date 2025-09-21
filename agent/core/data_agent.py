@@ -8,12 +8,21 @@ import uuid
 import yfinance as yf
 import pandas as pd
 
+# Coral v01 SDK imports
+try:
+    from coral_sdk import CoralAgent, method, pricing
+    from coral_sdk.types import Amount
+    CORAL_SDK_AVAILABLE = True
+    logger = logging.getLogger(__name__)
+    logger.info("Coral v01 SDK available for data agent")
+except ImportError:
+    CORAL_SDK_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("Coral v01 SDK not available, using fallback implementation")
+
 from utils.yahoo import yahoo
 from utils.polygon import polygon
 from .dashboard_data_service import DashboardDataService
-
-# Set up logger
-logger = logging.getLogger(__name__)
 
 # Use real FRED API with fallback for missing API keys
 try:
@@ -26,63 +35,84 @@ except (ImportError, ValueError) as e:
 from ..shared.models import MarketData, MacroData, MacroSignal, MacroSignals
 from ..shared.config import config
 from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
-# LLM imports commented out for pure data retrieval focus
-# try:
-#     from .mistral_client import mistral_client
-# except ImportError:
-#     mistral_client = None
-
-logger = logging.getLogger(__name__)
 
 
-class DataAgent(BaseAgent):
-    """
-    Data Agent responsible for collecting and providing financial data.
-    Focuses purely on data retrieval from external sources.
-    LLM validation capabilities are commented out to maintain pure data focus.
-    Provides real-time market prices and macro-economic data to other agents.
-    """
+# Conditional Coral SDK agent decorator
+if CORAL_SDK_AVAILABLE:
+    @CoralAgent(name="neural-capital-data-agent",
+                description="Neural Capital Data Agent - Provides real-time financial market data, macroeconomic indicators, and trading signals")
+    class DataAgent(BaseAgent):
+        """
+        Data Agent responsible for collecting and providing financial data.
+        Focuses purely on data retrieval from external sources.
+        Enhanced with Coral v01 SDK for decentralized agent interactions.
+        Provides real-time market prices and macro-economic data to other agents.
+        """
 
-    def __init__(self, coral_server_url: str = "http://localhost:5555"):
-        super().__init__(coral_server_url, "data_agent")
+        def __init__(self, coral_server_url: str = "http://localhost:5555"):
+            super().__init__(coral_server_url, "data_agent")
 
-        # Load configuration instead of hardcoded values
-        self.equity_universe = config.data_agent.EQUITY_UNIVERSE
-        self.fixed_income_universe = config.data_agent.FIXED_INCOME_UNIVERSE
-        self.alternatives_universe = config.data_agent.ALTERNATIVES_UNIVERSE
-        self.crypto_universe = config.data_agent.CRYPTO_UNIVERSE
+            # Load configuration instead of hardcoded values
+            self._init_config()
 
-        self.all_assets = (
-            self.equity_universe +
-            self.fixed_income_universe +
-            self.alternatives_universe +
-            self.crypto_universe
-        )
+        def _init_config(self):
+            """Initialize configuration for both Coral SDK and fallback versions"""
+            self.equity_universe = config.data_agent.EQUITY_UNIVERSE
+            self.fixed_income_universe = config.data_agent.FIXED_INCOME_UNIVERSE
+            self.alternatives_universe = config.data_agent.ALTERNATIVES_UNIVERSE
+            self.crypto_universe = config.data_agent.CRYPTO_UNIVERSE
+else:
+    class DataAgent(BaseAgent):
+        """
+        Data Agent responsible for collecting and providing financial data.
+        Focuses purely on data retrieval from external sources.
+        Provides real-time market prices and macro-economic data to other agents.
+        """
 
-        self.macro_indicators = config.data_agent.MACRO_INDICATORS
+        def __init__(self, coral_server_url: str = "http://localhost:5555"):
+            super().__init__(coral_server_url, "data_agent")
 
-        # Dashboard ETFs - your requested list
-        self.dashboard_etfs = {
-            "QQQ": "Invesco QQQ Trust",
-            "ETH": "Grayscale Ethereum Mini Trust ETF",  # Using ETHE as ticker
-            "SPY": "SPDR S&P 500 ETF",
-            "VXUS": "Vanguard Total International Stock Index Fund ETF Shares",
-            "IEF": "iShares 7-10 Year Treasury Bond ETF",
-            "BTC": "Grayscale Bitcoin Mini Trust ETF",  # Using BITO as ticker
-            "BND": "Vanguard Total Bond Market Index Fund",
-            "SHY": "iShares 1-3 Year Treasury Bond ETF"
-        }
+            # Load configuration instead of hardcoded values
+            self._init_config()
 
-        # Map display names to actual tickers
-        self.ticker_mapping = {
-            "ETH": "ETHE",  # Grayscale Ethereum Mini Trust ETF
-            "BTC": "BITO"   # ProShares Bitcoin Strategy ETF
-        }
+        def _init_config(self):
+            """Initialize configuration for both Coral SDK and fallback versions"""
+            self.equity_universe = config.data_agent.EQUITY_UNIVERSE
+            self.fixed_income_universe = config.data_agent.FIXED_INCOME_UNIVERSE
+            self.alternatives_universe = config.data_agent.ALTERNATIVES_UNIVERSE
+            self.crypto_universe = config.data_agent.CRYPTO_UNIVERSE
 
-        self.update_frequencies = {
-            "daily": ["market_data", "vix", "yield_curve", "credit_spreads", "dxy"],
-            "monthly": ["cpi", "unemployment", "fed_funds", "pmi", "equity_valuations"]
-        }
+            self.all_assets = (
+                self.equity_universe +
+                self.fixed_income_universe +
+                self.alternatives_universe +
+                self.crypto_universe
+            )
+
+            self.macro_indicators = config.data_agent.MACRO_INDICATORS
+
+            # Dashboard ETFs - your requested list
+            self.dashboard_etfs = {
+                "QQQ": "Invesco QQQ Trust",
+                "ETH": "Grayscale Ethereum Mini Trust ETF",  # Using ETHE as ticker
+                "SPY": "SPDR S&P 500 ETF",
+                "VXUS": "Vanguard Total International Stock Index Fund ETF Shares",
+                "IEF": "iShares 7-10 Year Treasury Bond ETF",
+                "BTC": "Grayscale Bitcoin Mini Trust ETF",  # Using BITO as ticker
+                "BND": "Vanguard Total Bond Market Index Fund",
+                "SHY": "iShares 1-3 Year Treasury Bond ETF"
+            }
+
+            # Map display names to actual tickers
+            self.ticker_mapping = {
+                "ETH": "ETHE",  # Grayscale Ethereum Mini Trust ETF
+                "BTC": "BITO"   # ProShares Bitcoin Strategy ETF
+            }
+
+            self.update_frequencies = {
+                "daily": ["market_data", "vix", "yield_curve", "credit_spreads", "dxy"],
+                "monthly": ["cpi", "unemployment", "fed_funds", "pmi", "equity_valuations"]
+            }
 
     async def fetch_market_data(self, ticker: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> MarketData:
         """
@@ -713,3 +743,29 @@ class DataAgent(BaseAgent):
                 "error": str(e),
                 "timestamp": get_current_timestamp()
             }
+
+
+# Apply Coral SDK decorators if available
+if CORAL_SDK_AVAILABLE:
+    # Apply method decorators to key public methods
+    DataAgent.fetch_market_data = method(
+        pricing=pricing.fixed(Amount(amount=0.01, currency="coral"))
+    )(DataAgent.fetch_market_data)
+
+    DataAgent.fetch_all_market_data = method(
+        pricing=pricing.fixed(Amount(amount=0.05, currency="coral"))
+    )(DataAgent.fetch_all_market_data)
+
+    DataAgent.get_market_context = method(
+        pricing=pricing.fixed(Amount(amount=0.02, currency="coral"))
+    )(DataAgent.get_market_context)
+
+    DataAgent.fetch_macro_data = method(
+        pricing=pricing.fixed(Amount(amount=0.03, currency="coral"))
+    )(DataAgent.fetch_macro_data)
+
+    DataAgent.get_dashboard_data = method(
+        pricing=pricing.fixed(Amount(amount=0.02, currency="coral"))
+    )(DataAgent.get_dashboard_data)
+
+    logger.info("Applied Coral v01 SDK decorators to DataAgent methods")

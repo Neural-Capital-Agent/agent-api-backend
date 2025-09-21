@@ -9,24 +9,38 @@ from datetime import datetime
 import logging
 
 from agent.core.data_agent import DataAgent
+from agent.coral.client import CoralClient
 from .shared import get_user_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Data Agent"], prefix="/data")
 
-# Initialize agent
+# Initialize agent with Coral v01 integration
 data_agent = DataAgent()
+
+# Initialize Coral client for agent-to-agent communication
+coral_client = CoralClient(agent_id="data_agent_api")
 
 
 @router.get("/health")
 async def data_agent_health():
     """Check Data Agent health and data source availability."""
     try:
-        health_status = await data_agent.health_check()
+        # Check agent health
+        agent_health = await data_agent.health_check()
+
+        # Check Coral client health
+        coral_health = await coral_client.health_check()
+
         return {
             "agent": "data_agent",
             "status": "healthy",
-            "data_sources": health_status,
+            "data_sources": agent_health,
+            "coral_protocol": {
+                "status": coral_health.get("status", "unknown"),
+                "client_active": coral_health.get("client_info", {}).get("client_active", False),
+                "coral_server_url": coral_health.get("client_info", {}).get("coral_server_url")
+            },
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
