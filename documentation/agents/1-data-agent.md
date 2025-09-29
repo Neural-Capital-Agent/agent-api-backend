@@ -1,5 +1,12 @@
 # Data Agent Documentation
 
+## Data Storage - Supabase Tables
+
+The Data Agent stores its data in the following Supabase tables:
+- **`dashboard_market_data`** - Real-time ETF and market data for dashboard display
+- **`dashboard_macro_data`** - Macro-economic indicators (CPI, Treasury yields, Fed funds rate, unemployment)
+- **`analysis_sessions`** - Session tracking for multi-agent analysis workflows
+
 ## Overview
 
 The **Data Agent** is responsible for **real-time market data collection, processing, and macro-economic signal generation**. It serves as the foundational data layer for all other agents in the Neural Capital system, providing up-to-date market information, economic indicators, and risk signals that drive investment decisions.
@@ -515,5 +522,219 @@ Common error codes:
 - `invalid_ticker`: Invalid stock symbol provided
 - `rate_limit_exceeded`: API rate limit exceeded
 - `data_source_unavailable`: External data source is down
+
+## Data Generation and Storage Analysis
+
+### 1. Market Data Types Generated
+
+**Primary Market Data Structure** (`MarketData` object):
+```python
+{
+  "symbol": "SPY",           # Stock/ETF ticker symbol
+  "price": 445.67,           # Current/latest price
+  "previous_close": 442.30,  # Previous closing price
+  "change": 3.37,            # Price change in dollars
+  "change_percent": 0.76,    # Price change percentage
+  "timestamp": "2024-01-15T16:00:00Z"  # Data collection timestamp
+}
+```
+
+**Asset Universe Coverage**:
+- **Equity ETFs**: SPY, QQQ, VXUS, VTI (Core stock market exposure)
+- **Fixed Income**: BND, IEF, SHY, TLT (Bond market coverage)
+- **Alternatives**: GLD (Gold), VNQ (Real Estate)
+- **Crypto ETFs**: BITO (Bitcoin), ETHE (Ethereum)
+
+### 2. Macro-Economic Data Generation
+
+**FRED API Integration** (`MacroData` objects):
+```python
+{
+  "indicator": "CPI",               # Economic indicator name
+  "value": 3.2,                    # Indicator value
+  "date": "2024-01-01",            # Data point date
+  "frequency": "monthly"           # Update frequency
+}
+```
+
+**Key Economic Indicators Tracked**:
+- **CPI**: Consumer Price Index (inflation measurement)
+- **Treasury Yields**: 2-Year and 10-Year government bond yields
+- **Fed Funds Rate**: Federal Reserve benchmark interest rate
+- **Unemployment Rate**: Labor market health indicator
+- **PMI**: Purchasing Managers' Index (economic activity)
+
+### 3. Volatility and Risk Metrics
+
+**VIX Volatility Data** (`fetch_volatility_data()`):
+```python
+{
+  "vix": 18.45,                    # Current VIX level
+  "vix_change": -1.23,             # Daily change in VIX
+  "vix_change_percent": -6.25,     # Percentage change
+  "timestamp": "2024-01-15T16:00:00Z"
+}
+```
+
+**Treasury Yield Analysis** (`fetch_treasury_yields()`):
+```python
+{
+  "2y_yield": 4.85,                # 2-Year Treasury yield
+  "10y_yield": 4.45,               # 10-Year Treasury yield
+  "2s_10s_spread": -0.40,          # Yield curve spread (10Y - 2Y)
+  "timestamp": "2024-01-15T16:00:00Z"
+}
+```
+
+### 4. Technical Analysis Data
+
+**Technical Indicators** (`fetch_technical_indicators()`):
+```python
+{
+  "sma_20": 442.15,                # 20-day Simple Moving Average
+  "sma_50": 438.92,                # 50-day Simple Moving Average
+  "sma_200": 425.33,               # 200-day Simple Moving Average
+  "rsi": 58.3,                     # Relative Strength Index (14-period)
+  "current_price": 445.67,         # Latest price
+  "timestamp": "2024-01-15T16:00:00Z"
+}
+```
+
+### 5. Market Context and Regime Detection
+
+**Comprehensive Market Context** (`get_market_context()`):
+```python
+{
+  "market_data": {
+    "spy_price": 445.67,           # S&P 500 ETF price
+    "spy_change_percent": 0.76,    # Daily percentage change
+    "vix": 18.45,                  # Volatility index
+    "yield_spread_2s10s": -0.40,   # Yield curve spread
+    "momentum_signal": "bullish"    # Market direction signal
+  },
+  "macro_indicators": {
+    "CPI": {
+      "current_value": 3.2,
+      "previous_value": 3.1,
+      "trend": "up"
+    }
+  },
+  "market_regime": "normal_market_conditions"
+}
+```
+
+**Market Regime Classifications**:
+- `high_volatility_crisis` (VIX > 30)
+- `elevated_volatility` (VIX > 25)
+- `yield_curve_inversion` (2s10s spread < 0)
+- `flattening_curve` (spread < 0.5)
+- `low_volatility_complacency` (VIX < 15)
+- `normal_market_conditions` (baseline)
+
+### 6. Database Storage Implementation
+
+**Primary Storage Tables**:
+
+#### `dashboard_market_data` Table
+Stores all ETF/stock market data with comprehensive metrics:
+```sql
+Columns:
+- symbol, name, asset_type
+- price, previous_close, change_value, change_percent
+- volume, market_cap, pe_ratio, dividend_yield
+- day_high, day_low, year_high, year_low
+- sma_20, sma_50, sma_200, rsi
+- beta, expense_ratio, total_assets
+- context_data (JSON), data_timestamp, updated_at
+```
+
+#### `dashboard_macro_data` Table
+Stores macro-economic indicators from FRED API:
+```sql
+Columns:
+- indicator_name, value, date
+- source, metadata (JSON)
+- created_at, updated_at
+```
+
+#### `user_dashboard_settings` Table
+Stores user preferences and watchlists:
+```sql
+Columns:
+- user_id, watchlist_symbols
+- preferred_charts, layout_config
+- created_at, updated_at
+```
+
+### 7. Data Storage Services
+
+**DashboardDataService Methods**:
+- `save_market_data()`: Saves ETF/stock data to dashboard_market_data
+- `save_technical_indicators()`: Updates technical analysis fields
+- `save_market_context_data()`: Saves VIX and Treasury data
+- `save_macro_data()`: Stores economic indicators
+- `get_dashboard_data()`: Retrieves all dashboard data
+- `save_user_watchlist()`: Manages user preferences
+
+### 8. Real-time Dashboard Integration
+
+**Dashboard ETF Focus** (`fetch_dashboard_etfs()`):
+Core holdings tracked for dashboard display:
+- **QQQ**: NASDAQ-100 ETF
+- **ETH**: Ethereum ETF (mapped to ETHE)
+- **SPY**: S&P 500 ETF
+- **VXUS**: International stocks ETF
+- **IEF**: 7-10 Year Treasury Bond ETF
+- **BTC**: Bitcoin ETF (mapped to BITO)
+- **BND**: Total Bond Market ETF
+- **SHY**: 1-3 Year Treasury Bond ETF
+
+**Data Refresh Process** (`refresh_dashboard_data()`):
+1. Fetches current prices for all dashboard ETFs
+2. Calculates technical indicators (SMA, RSI)
+3. Updates VIX and Treasury yield data
+4. Saves macro-economic indicators
+5. Returns comprehensive refresh status
+
+### 9. Signal Validation and Quality Assurance
+
+**Signal Validation** (`validate_signals()`):
+- Cross-references macro signals with real market data
+- Validates yield curve inversions against actual Treasury spreads
+- Confirms volatility spikes with current VIX levels
+- Returns confidence scores based on data consistency
+
+**Health Monitoring** (`health_check()`):
+```python
+{
+  "yahoo_finance": "healthy",      # Market data source status
+  "fred": "healthy"                # Economic data source status
+}
+```
+
+### 10. Integration with Other Agents
+
+**Portfolio Agent Integration**:
+- Provides market data for portfolio optimization
+- Supplies volatility data for stress testing
+- Delivers macro signals for rebalancing triggers
+
+**Planner Agent Integration**:
+- Supplies economic indicators for Monte Carlo simulations
+- Provides market context for goal feasibility analysis
+
+**Explainability Agent Integration**:
+- Delivers market regime context for decision explanations
+- Provides historical market data for contextual analysis
+
+## Data Flow Architecture
+
+```
+External APIs → Data Agent → Database Storage → Other Agents
+     ↓              ↓              ↓              ↓
+Yahoo Finance  fetch_market_   dashboard_     Portfolio
+FRED API    →  data() etc.  →  market_data →  Planner
+Polygon.io                     tables        Explainability
+```
 
 This Data Agent forms the critical foundation of the Neural Capital system, ensuring all other agents have access to accurate, timely, and comprehensive financial market data for making informed investment decisions.

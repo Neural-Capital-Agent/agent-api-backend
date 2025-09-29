@@ -186,20 +186,75 @@ class AgentDataService:
             bool: True if successful
         """
         try:
-            explanation_record = {
-                "id": str(uuid.uuid4()),
-                "session_id": session_id,
-                "user_id": user_id,
-                "main_explanation": explanation_data.get("main_explanation"),
-                "risk_framework": explanation_data.get("risk_framework"),
-                "return_expectations": explanation_data.get("return_expectations"),
-                "monitoring_approach": explanation_data.get("monitoring_approach"),
-                "word_count": explanation_data.get("word_count"),
-                "confidence_score": explanation_data.get("confidence_score"),
-                "theoretical_framework": explanation_data.get("theoretical_framework"),
-                "explanation_metadata": json.dumps(explanation_data.get("metadata", {})),
-                "created_at": datetime.now().isoformat()
-            }
+            # Ensure required fields have non-null values
+            original_query = explanation_data.get("original_query", "Comprehensive investment analysis")
+            main_explanation = explanation_data.get("main_explanation", "")
+            recommendation_summary = main_explanation[:500] if main_explanation else "Investment analysis completed"
+
+            # Validate and sanitize confidence score
+            confidence_score = explanation_data.get("confidence_score")
+            if confidence_score is not None:
+                try:
+                    confidence_score = float(confidence_score)
+                    # Ensure it's between 0 and 1
+                    confidence_score = max(0.0, min(1.0, confidence_score))
+                except (ValueError, TypeError):
+                    confidence_score = None
+
+            # Map the explanation data to the actual table schema
+            # Build record step by step to avoid any issues
+            explanation_record = {}
+
+            # Required fields first
+            explanation_record["agent_type"] = "explainability_agent"
+            explanation_record["original_query"] = original_query
+            explanation_record["recommendation_summary"] = recommendation_summary
+            explanation_record["explanation_text"] = main_explanation or "Analysis completed"
+
+            # Optional UUID fields
+            explanation_record["id"] = str(uuid.uuid4())
+            explanation_record["session_id"] = session_id
+            explanation_record["user_id"] = user_id
+
+            # Optional text fields
+            explanation_record["main_explanation"] = main_explanation
+            explanation_record["risk_framework"] = explanation_data.get("risk_framework")
+            explanation_record["return_expectations"] = explanation_data.get("return_expectations")
+            explanation_record["monitoring_approach"] = explanation_data.get("monitoring_approach")
+            explanation_record["theoretical_framework"] = explanation_data.get("theoretical_framework")
+            explanation_record["methodology"] = explanation_data.get("methodology", "llm_enhanced")
+            explanation_record["limitations"] = explanation_data.get("limitations")
+            explanation_record["complexity_level"] = explanation_data.get("complexity_level", "intermediate")
+            explanation_record["explanation_type"] = "comprehensive_analysis"
+
+            # Numeric fields
+            explanation_record["word_count"] = explanation_data.get("word_count")
+            explanation_record["confidence_score"] = confidence_score
+
+            # JSONB fields - ensure they're proper JSON
+            explanation_record["reasoning_steps"] = explanation_data.get("reasoning_steps") or {}
+            explanation_record["risk_factors"] = explanation_data.get("risk_factors") or {}
+            explanation_record["assumptions"] = explanation_data.get("assumptions") or {}
+            explanation_record["alternative_scenarios"] = explanation_data.get("alternative_scenarios") or {}
+            explanation_record["data_sources"] = explanation_data.get("data_sources") or {}
+            explanation_record["user_feedback"] = explanation_data.get("user_feedback") or {}
+            explanation_record["follow_up_questions"] = explanation_data.get("follow_up_questions") or {}
+            explanation_record["explanation_summary"] = explanation_data.get("explanation_summary") or {}
+            explanation_record["components"] = explanation_data.get("components") or {}
+            explanation_record["quality_metrics"] = explanation_data.get("quality_metrics") or {}
+
+            # Handle metadata as JSON string
+            explanation_record["explanation_metadata"] = json.dumps(explanation_data.get("metadata", {}))
+
+            # Timestamps
+            explanation_record["created_at"] = datetime.now().isoformat()
+            explanation_record["updated_at"] = datetime.now().isoformat()
+
+            logger.info(f"Attempting to save explainability analysis for session {session_id}")
+            logger.info(f"Record keys: {list(explanation_record.keys())}")
+            logger.info(f"Agent type value: '{explanation_record.get('agent_type')}'")
+            logger.info(f"Original query value: '{explanation_record.get('original_query')}'")
+            logger.info(f"Recommendation summary value: '{explanation_record.get('recommendation_summary')}'")
 
             result = supabase.table(AgentDataService.EXPLAINABILITY_ANALYSIS_TABLE).insert(explanation_record).execute()
 
@@ -211,6 +266,26 @@ class AgentDataService:
 
         except Exception as e:
             logger.error(f"Error saving explainability analysis: {e}")
+            logger.error(f"Session ID: {session_id}, User ID: {user_id}")
+            logger.error(f"Explanation data keys: {list(explanation_data.keys())}")
+
+            # Log sample of the data being inserted
+            if 'explanation_record' in locals():
+                logger.error(f"Record being inserted - first 5 keys: {dict(list(explanation_record.items())[:5])}")
+
+            # Log the specific error details
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+
+            # Try to identify if it's a specific database constraint issue
+            error_str = str(e).lower()
+            if 'constraint' in error_str:
+                logger.error(f"Database constraint violation detected: {e}")
+            elif 'column' in error_str and 'does not exist' in error_str:
+                logger.error(f"Database schema mismatch detected: {e}")
+            elif 'null value' in error_str:
+                logger.error(f"NULL constraint violation detected: {e}")
+
             return False
 
     @staticmethod

@@ -8,17 +8,7 @@ import uuid
 import yfinance as yf
 import pandas as pd
 
-# Coral v01 SDK imports
-try:
-    from coral_sdk import CoralAgent, method, pricing
-    from coral_sdk.types import Amount
-    CORAL_SDK_AVAILABLE = True
-    logger = logging.getLogger(__name__)
-    logger.info("Coral v01 SDK available for data agent")
-except ImportError:
-    CORAL_SDK_AVAILABLE = False
-    logger = logging.getLogger(__name__)
-    logger.warning("Coral v01 SDK not available, using fallback implementation")
+logger = logging.getLogger(__name__)
 
 from utils.yahoo import yahoo
 from utils.polygon import polygon
@@ -34,96 +24,80 @@ except (ImportError, ValueError) as e:
     from utils.fred import fred
 from ..shared.models import MarketData, MacroData, MacroSignal, MacroSignals
 from ..shared.config import config
-from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
+from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get
 
 
-# Conditional Coral SDK agent decorator
-if CORAL_SDK_AVAILABLE:
-    @CoralAgent(name="neural-capital-data-agent",
-                description="Neural Capital Data Agent - Provides real-time financial market data, macroeconomic indicators, and trading signals")
-    class DataAgent(BaseAgent):
-        """
-        Data Agent responsible for collecting and providing financial data.
-        Focuses purely on data retrieval from external sources.
-        Enhanced with Coral v01 SDK for decentralized agent interactions.
-        Provides real-time market prices and macro-economic data to other agents.
-        """
+class DataAgent(BaseAgent):
+    """
+    Data Agent responsible for collecting and providing financial data.
+    Focuses purely on data retrieval from external sources.
+    Provides real-time market prices and macro-economic data to other agents.
+    """
 
-        def __init__(self, coral_server_url: str = "http://localhost:5555"):
-            super().__init__(coral_server_url, "data_agent")
+    def __init__(self):
+        super().__init__("data_agent")
 
-            # Load configuration instead of hardcoded values
-            self._init_config()
+        # Load configuration instead of hardcoded values
+        self._init_config()
 
-        def _init_config(self):
-            """Initialize configuration for both Coral SDK and fallback versions"""
-            self.equity_universe = config.data_agent.EQUITY_UNIVERSE
-            self.fixed_income_universe = config.data_agent.FIXED_INCOME_UNIVERSE
-            self.alternatives_universe = config.data_agent.ALTERNATIVES_UNIVERSE
-            self.crypto_universe = config.data_agent.CRYPTO_UNIVERSE
-else:
-    class DataAgent(BaseAgent):
-        """
-        Data Agent responsible for collecting and providing financial data.
-        Focuses purely on data retrieval from external sources.
-        Provides real-time market prices and macro-economic data to other agents.
-        """
+    def _init_config(self):
+        """Initialize configuration"""
+        self.equity_universe = config.data_agent.EQUITY_UNIVERSE
+        self.fixed_income_universe = config.data_agent.FIXED_INCOME_UNIVERSE
+        self.alternatives_universe = config.data_agent.ALTERNATIVES_UNIVERSE
+        self.crypto_universe = config.data_agent.CRYPTO_UNIVERSE
 
-        def __init__(self, coral_server_url: str = "http://localhost:5555"):
-            super().__init__(coral_server_url, "data_agent")
+        self.all_assets = (
+            self.equity_universe +
+            self.fixed_income_universe +
+            self.alternatives_universe +
+            self.crypto_universe
+        )
 
-            # Load configuration instead of hardcoded values
-            self._init_config()
+        self.macro_indicators = config.data_agent.MACRO_INDICATORS
 
-        def _init_config(self):
-            """Initialize configuration for both Coral SDK and fallback versions"""
-            self.equity_universe = config.data_agent.EQUITY_UNIVERSE
-            self.fixed_income_universe = config.data_agent.FIXED_INCOME_UNIVERSE
-            self.alternatives_universe = config.data_agent.ALTERNATIVES_UNIVERSE
-            self.crypto_universe = config.data_agent.CRYPTO_UNIVERSE
+        # Dashboard ETFs - your requested list
+        self.dashboard_etfs = {
+            "QQQ": "Invesco QQQ Trust",
+            "ETH": "Grayscale Ethereum Mini Trust ETF",  # Using ETHE as ticker
+            "SPY": "SPDR S&P 500 ETF",
+            "VXUS": "Vanguard Total International Stock Index Fund ETF Shares",
+            "IEF": "iShares 7-10 Year Treasury Bond ETF",
+            "BTC": "Grayscale Bitcoin Mini Trust ETF",  # Using BITO as ticker
+            "BND": "Vanguard Total Bond Market Index Fund",
+            "SHY": "iShares 1-3 Year Treasury Bond ETF"
+        }
 
-            self.all_assets = (
-                self.equity_universe +
-                self.fixed_income_universe +
-                self.alternatives_universe +
-                self.crypto_universe
-            )
+        # Map display names to actual tickers
+        self.ticker_mapping = {
+            "ETH": "ETHE",  # Grayscale Ethereum Mini Trust ETF
+            "BTC": "BITO"   # ProShares Bitcoin Strategy ETF
+        }
 
-            self.macro_indicators = config.data_agent.MACRO_INDICATORS
+        self.update_frequencies = {
+            "daily": ["market_data", "vix", "yield_curve", "credit_spreads", "dxy"],
+            "monthly": ["cpi", "unemployment", "fed_funds", "pmi", "equity_valuations"]
+        }
 
-            # Dashboard ETFs - your requested list
-            self.dashboard_etfs = {
-                "QQQ": "Invesco QQQ Trust",
-                "ETH": "Grayscale Ethereum Mini Trust ETF",  # Using ETHE as ticker
-                "SPY": "SPDR S&P 500 ETF",
-                "VXUS": "Vanguard Total International Stock Index Fund ETF Shares",
-                "IEF": "iShares 7-10 Year Treasury Bond ETF",
-                "BTC": "Grayscale Bitcoin Mini Trust ETF",  # Using BITO as ticker
-                "BND": "Vanguard Total Bond Market Index Fund",
-                "SHY": "iShares 1-3 Year Treasury Bond ETF"
-            }
+        # Cache for market data to reduce API calls
+        self.market_data_cache = {}
+        self.cache_expiry = {}
 
-            # Map display names to actual tickers
-            self.ticker_mapping = {
-                "ETH": "ETHE",  # Grayscale Ethereum Mini Trust ETF
-                "BTC": "BITO"   # ProShares Bitcoin Strategy ETF
-            }
+        # Dashboard data service for centralized dashboard data management
+        self.dashboard_service = DashboardDataService()
 
-            self.update_frequencies = {
-                "daily": ["market_data", "vix", "yield_curve", "credit_spreads", "dxy"],
-                "monthly": ["cpi", "unemployment", "fed_funds", "pmi", "equity_valuations"]
-            }
+        logger.info(f"DataAgent initialized with {len(self.all_assets)} tracked assets")
 
     async def fetch_market_data(self, ticker: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> MarketData:
         """
-        Fetch real-time market data for a specific ticker.
+            Fetch real-time market data for a specific ticker.
 
-        Args:
+            Args:
             ticker: Stock symbol (e.g., 'SPY', 'QQQ')
             start_date: Start date for historical data (YYYY-MM-DD)
             end_date: End date for historical data (YYYY-MM-DD)
 
-        Returns:
+            Returns:
             MarketData object containing price and metadata
         """
         try:
@@ -144,9 +118,9 @@ else:
 
     async def fetch_all_market_data(self) -> List[MarketData]:
         """
-        Fetch market data for all assets in the universe.
+            Fetch market data for all assets in the universe.
 
-        Returns:
+            Returns:
             List of MarketData objects
         """
         market_data = []
@@ -162,13 +136,13 @@ else:
 
     async def fetch_macro_data(self, indicator: str, date_range: Optional[int] = 30) -> List[MacroData]:
         """
-        Fetch macro-economic data from FRED API.
+            Fetch macro-economic data from FRED API.
 
-        Args:
+            Args:
             indicator: Economic indicator code (e.g., 'CPI', '10Y_TREASURY')
             date_range: Number of days to look back for data
 
-        Returns:
+            Returns:
             List of MacroData objects
         """
         try:
@@ -200,9 +174,9 @@ else:
 
     async def fetch_volatility_data(self) -> Dict[str, float]:
         """
-        Fetch VIX and other volatility indicators.
+            Fetch VIX and other volatility indicators.
 
-        Returns:
+            Returns:
             Dictionary containing volatility metrics
         """
         try:
@@ -228,13 +202,13 @@ else:
 
     async def fetch_technical_indicators(self, ticker: str, period: str = "1y") -> Dict[str, Any]:
         """
-        Fetch technical indicators like SMA, MACD, RSI for a given ticker.
+            Fetch technical indicators like SMA, MACD, RSI for a given ticker.
 
-        Args:
+            Args:
             ticker: Stock symbol
             period: Time period for historical data
 
-        Returns:
+            Returns:
             Dictionary containing technical indicators
         """
         try:
@@ -268,9 +242,9 @@ else:
 
     async def fetch_treasury_yields(self) -> Dict[str, float]:
         """
-        Fetch Treasury yields and calculate spreads.
+            Fetch Treasury yields and calculate spreads.
 
-        Returns:
+            Returns:
             Dictionary containing yield data and spreads
         """
         try:
@@ -295,9 +269,9 @@ else:
 
     async def get_market_momentum_signals(self) -> Dict[str, Any]:
         """
-        Generate market momentum signals based on technical indicators.
+            Generate market momentum signals based on technical indicators.
 
-        Returns:
+            Returns:
             Dictionary containing momentum signals
         """
         try:
@@ -324,9 +298,9 @@ else:
 
     async def health_check(self) -> Dict[str, str]:
         """
-        Perform health check of data sources.
+            Perform health check of data sources.
 
-        Returns:
+            Returns:
             Dictionary containing health status of each data source
         """
         health_status = {}
@@ -347,16 +321,16 @@ else:
 
         return health_status
 
-    # Coral Protocol Integration Methods
+        # Coral Protocol Integration Methods
     async def validate_signals(self, signals: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate macro signals using rule-based logic only.
-        LLM validation is commented out to focus on pure data operations.
+            Validate macro signals using rule-based logic only.
+            LLM validation is commented out to focus on pure data operations.
 
-        Args:
+            Args:
             signals: Dictionary containing signal data to validate
 
-        Returns:
+            Returns:
             Validation result with confidence score based on market data
         """
         try:
@@ -446,12 +420,12 @@ else:
 
     async def get_market_context(self, timestamp: Optional[str] = None) -> Dict[str, Any]:
         """
-        Get comprehensive market context for explanations via Coral Protocol.
+            Get comprehensive market context for explanations via Coral Protocol.
 
-        Args:
+            Args:
             timestamp: Optional timestamp for historical context
 
-        Returns:
+            Returns:
             Comprehensive market context data
         """
         try:
@@ -499,9 +473,9 @@ else:
 
     def _determine_market_regime(self, spy_data: MarketData, vix_data: Dict, treasury_data: Dict) -> str:
         """
-        Determine current market regime based on available data.
+            Determine current market regime based on available data.
 
-        Returns:
+            Returns:
             Market regime description
         """
         try:
@@ -527,12 +501,12 @@ else:
 
     async def fetch_dashboard_etfs(self, save_to_db: bool = True) -> Dict[str, Any]:
         """
-        Fetch market data for all dashboard ETFs and optionally save to database.
+            Fetch market data for all dashboard ETFs and optionally save to database.
 
-        Args:
+            Args:
             save_to_db: Whether to save data to Supabase dashboard tables
 
-        Returns:
+            Returns:
             Dictionary containing market data for all dashboard ETFs
         """
         try:
@@ -589,12 +563,12 @@ else:
 
     async def _get_additional_etf_info(self, ticker: str) -> Dict[str, Any]:
         """
-        Get additional ETF information using yfinance.
+            Get additional ETF information using yfinance.
 
-        Args:
+            Args:
             ticker: ETF ticker symbol
 
-        Returns:
+            Returns:
             Dictionary containing additional ETF info
         """
         try:
@@ -662,12 +636,12 @@ else:
 
     async def get_dashboard_data(self, user_id: str = None) -> Dict[str, Any]:
         """
-        Get comprehensive dashboard data from database.
+            Get comprehensive dashboard data from database.
 
-        Args:
+            Args:
             user_id: Optional user ID to get personalized watchlist
 
-        Returns:
+            Returns:
             Dictionary containing all dashboard data
         """
         try:
@@ -702,9 +676,9 @@ else:
 
     async def refresh_dashboard_data(self) -> Dict[str, Any]:
         """
-        Refresh all dashboard data by fetching new data and saving to database.
+            Refresh all dashboard data by fetching new data and saving to database.
 
-        Returns:
+            Returns:
             Dictionary containing refresh status and data
         """
         try:
@@ -745,27 +719,3 @@ else:
             }
 
 
-# Apply Coral SDK decorators if available
-if CORAL_SDK_AVAILABLE:
-    # Apply method decorators to key public methods
-    DataAgent.fetch_market_data = method(
-        pricing=pricing.fixed(Amount(amount=0.01, currency="coral"))
-    )(DataAgent.fetch_market_data)
-
-    DataAgent.fetch_all_market_data = method(
-        pricing=pricing.fixed(Amount(amount=0.05, currency="coral"))
-    )(DataAgent.fetch_all_market_data)
-
-    DataAgent.get_market_context = method(
-        pricing=pricing.fixed(Amount(amount=0.02, currency="coral"))
-    )(DataAgent.get_market_context)
-
-    DataAgent.fetch_macro_data = method(
-        pricing=pricing.fixed(Amount(amount=0.03, currency="coral"))
-    )(DataAgent.fetch_macro_data)
-
-    DataAgent.get_dashboard_data = method(
-        pricing=pricing.fixed(Amount(amount=0.02, currency="coral"))
-    )(DataAgent.get_dashboard_data)
-
-    logger.info("Applied Coral v01 SDK decorators to DataAgent methods")

@@ -13,7 +13,7 @@ from ..shared.models import (
     GlidePath, BondLadder
 )
 from ..shared.config import config
-from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
+from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get
 from ..clients.mistral_client import parse_goal_with_mistral, create_plan_with_mistral
 from ..services.agent_data_service import AgentDataService
 
@@ -65,8 +65,8 @@ class PlannerAgent(BaseAgent):
     and lifecycle-based investment planning.
     """
 
-    def __init__(self, coral_server_url: str = "http://localhost:5555"):
-        super().__init__(coral_server_url, "planner_agent")
+    def __init__(self):
+        super().__init__("planner_agent")
         from ..shared.models import GoalType, RiskLevel
 
         # Load goal strategies from configuration
@@ -262,17 +262,17 @@ class PlannerAgent(BaseAgent):
             raise
 
     async def process_natural_language_goal(self, goal_text: str):
-        """Use external LLM agents for advanced NLP processing via Coral Protocol"""
-        llm_response = await safe_coral_invoke(
-            self.coral_client,
-            "llm_agent",
-            "parse_goal",
-            {"text": goal_text, "context": "financial_planning"},
-            "process_natural_language_goal"
-        )
+        """Use external LLM agents for advanced NLP processing"""
+        try:
+            # Use direct mistral client instead of coral protocol
+            from ..clients.mistral_client import mistral_client
+            llm_response = await parse_goal_with_mistral(goal_text)
 
-        if llm_response:
-            return llm_response
+            if llm_response:
+                return llm_response
+
+        except Exception as e:
+            logger.error(f"Failed to process goal with LLM: {e}")
 
         # No fallbacks - raise error if LLM processing fails
         raise Exception("Failed to process goal with LLM and no fallback data available")
@@ -416,14 +416,12 @@ class PlannerAgent(BaseAgent):
 
     async def parse_goal_simple(self, goal_text: str):
         """Parse natural language goal into simple structured format"""
-        # Use Mistral LLM for goal parsing via Coral Protocol
-        llm_response = await safe_coral_invoke(
-            self.coral_client,
-            "llm_agent",
-            "parse_goal",
-            {"text": goal_text, "context": "financial_planning"},
-            "parse_goal"
-        )
+        # Use Mistral LLM for goal parsing
+        try:
+            llm_response = await parse_goal_with_mistral(goal_text)
+        except Exception as e:
+            logger.error(f"Failed to parse goal with LLM: {e}")
+            llm_response = None
 
         if llm_response:
             goal_type = self._extract_goal_type(goal_text, llm_response)
@@ -449,14 +447,12 @@ class PlannerAgent(BaseAgent):
             goal_type = GoalType[goal.get("type", "RETIREMENT")]
             strategy = self.get_goal_strategy(goal_type)
 
-            # Use Mistral LLM via Coral Protocol for plan creation
-            plan_response = await safe_coral_invoke(
-                self.coral_client,
-                "llm_agent",
-                "create_plan",
-                {"goal": goal, "strategy": strategy},
-                "create_plan"
-            )
+            # Use Mistral LLM for plan creation
+            try:
+                plan_response = await create_plan_with_mistral(goal, strategy)
+            except Exception as e:
+                logger.error(f"Failed to create plan with LLM: {e}")
+                plan_response = None
 
             if plan_response:
                 return {"plan": plan_response.get("plan", {"monthly_contribution": 1000})}

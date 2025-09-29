@@ -19,16 +19,44 @@ router = APIRouter(tags=["Tier Management"], prefix="/tier")
 async def get_current_tier(user_id: str = Depends(get_user_id)):
     """Get current user tier information."""
     try:
-        # Get user tier data from Supabase
+        # Handle anonymous users with default tier
+        if user_id == "anonymous":
+            return {
+                "success": True,
+                "tier_data": {
+                    "user_id": user_id,
+                    "tier": "free",
+                    "credits_remaining": 10,
+                    "tier_expires_at": None,
+                    "tier_features": get_default_tier_features("free"),
+                    "is_expired": False,
+                    "member_since": None,
+                    "last_updated": datetime.now().isoformat(),
+                    "is_anonymous": True
+                }
+            }
+
+        # Get user tier data from Supabase for authenticated users
         result = supabase.table("users").select(
             "user_tier, credits_remaining, tier_expires_at, tier_features, created_at"
-        ).eq("id", user_id).single().execute()
+        ).eq("id_user", user_id).single().execute()
 
         if not result.data:
-            raise HTTPException(
-                status_code=404,
-                detail={"error": "user_not_found", "message": "User not found"}
-            )
+            # Return default tier for unknown users instead of error
+            return {
+                "success": True,
+                "tier_data": {
+                    "user_id": user_id,
+                    "tier": "free",
+                    "credits_remaining": 10,
+                    "tier_expires_at": None,
+                    "tier_features": get_default_tier_features("free"),
+                    "is_expired": False,
+                    "member_since": None,
+                    "last_updated": datetime.now().isoformat(),
+                    "is_guest": True
+                }
+            }
 
         user_data = result.data
 

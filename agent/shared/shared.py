@@ -19,14 +19,11 @@ class BaseAgent:
     Provides common setup and utility methods.
     """
 
-    def __init__(self, coral_server_url: str = "http://localhost:5555", agent_id: str = None):
+    def __init__(self, agent_id: str = None):
         """Initialize base agent with common setup"""
-        from ..coral.client import CoralClient
-
         if agent_id is None:
             agent_id = self.__class__.__name__.lower().replace('agent', '_agent')
 
-        self.coral_client = CoralClient(coral_server_url, agent_id=agent_id)
         self.agent_id = agent_id
 
         # Common configuration access
@@ -122,21 +119,6 @@ class ErrorHandler:
 class AsyncUtils:
     """Utilities for async operations and patterns"""
 
-    @staticmethod
-    async def safe_coral_invoke(
-        coral_client,
-        target_agent: str,
-        method: str,
-        params: Dict[str, Any],
-        operation_name: str = None
-    ) -> Optional[Dict[str, Any]]:
-        """Safely invoke coral client with error handling"""
-        try:
-            return await coral_client.invoke_agent(target_agent, method, params)
-        except Exception as e:
-            operation = operation_name or f"{target_agent}.{method}"
-            logger.warning(f"Coral invocation failed for {operation}: {e}")
-            return None
 
     @staticmethod
     def async_error_handler(
@@ -296,17 +278,6 @@ def create_timestamped_response(**kwargs) -> Dict[str, Any]:
     return TimestampUtils.create_timestamped_response(**kwargs)
 
 
-async def safe_coral_invoke(
-    coral_client,
-    target_agent: str,
-    method: str,
-    params: Dict[str, Any],
-    operation_name: str = None
-) -> Optional[Dict[str, Any]]:
-    """Safe coral invocation - convenience function"""
-    return await AsyncUtils.safe_coral_invoke(
-        coral_client, target_agent, method, params, operation_name
-    )
 
 
 def log_fallback_usage(agent_type: str, operation: str):

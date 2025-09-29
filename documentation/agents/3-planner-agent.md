@@ -1,5 +1,12 @@
 # Planner Agent Documentation
 
+## Data Storage - Supabase Tables
+
+The Planner Agent stores its data in the following Supabase tables:
+- **`planner_analysis`** - Goal interpretation, financial planning results, and lifecycle strategies
+- **`monte_carlo_results`** - Monte Carlo simulation results for goal achievement probabilities
+- **`analysis_sessions`** - Session tracking for multi-agent analysis workflows
+
 ## Overview
 
 The **Planner Agent** is responsible for **natural language goal interpretation and lifecycle-based investment planning**. It converts natural language financial goals into structured investment strategies with specific allocations, time horizons, and risk levels, making financial planning accessible through conversational interfaces.

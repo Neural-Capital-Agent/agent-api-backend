@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from api.routes import stocks, alpaca, economy, user, llm, agents, coral, crew, dashboard, plan_creator, tier_management
+from api.routes import stocks, alpaca, economy, user, llm, agents, crew, dashboard, plan_creator, tier_management
 
 api_router = APIRouter()
 
@@ -20,8 +20,6 @@ api_router.include_router(plan_creator.router)  # Plan Creator with Agent 2 & 3 
 # CrewAI Workflows
 api_router.include_router(crew.router)  # CrewAI orchestrated workflows
 
-# Coral Protocol Integration
-api_router.include_router(coral.router)  # Coral Studio integration and agent registry
 
 # Tier Management
 api_router.include_router(tier_management.router)  # User tier and feature access management

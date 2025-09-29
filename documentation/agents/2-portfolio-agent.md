@@ -1,5 +1,13 @@
 # Portfolio Agent Documentation
 
+## Data Storage - Supabase Tables
+
+The Portfolio Agent stores its data in the following Supabase tables:
+- **`portfolio_analysis`** - Main portfolio optimization results, allocations, and risk metrics
+- **`stress_tests`** - Stress test scenarios and portfolio performance under adverse conditions
+- **`rebalancing_triggers`** - Dynamic rebalancing rules and trigger conditions
+- **`analysis_sessions`** - Session tracking for multi-agent analysis workflows
+
 ## Overview
 
 The **Portfolio Agent** is responsible for **algorithmic portfolio optimization and dynamic rebalancing** based on risk tolerance and macro-economic signals. It creates diversified investment portfolios and automatically adjusts them based on market conditions, ensuring optimal risk-return profiles for different investment objectives.

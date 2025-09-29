@@ -9,7 +9,7 @@ from enum import Enum
 
 from ..shared.models import RiskLevel, Portfolio, MacroSignals, MacroSignal, RebalanceAction
 from ..shared.config import config
-from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get, safe_coral_invoke
+from ..shared.shared import BaseAgent, ErrorHandler, get_current_timestamp, safe_get
 from ..services.agent_data_service import AgentDataService
 
 logger = logging.getLogger(__name__)
@@ -58,8 +58,8 @@ class PortfolioAgent(BaseAgent):
     and dynamic rebalancing based on risk tolerance and macro signals.
     """
 
-    def __init__(self, coral_server_url: str = "http://localhost:5555"):
-        super().__init__(coral_server_url, "portfolio_agent")
+    def __init__(self):
+        super().__init__("portfolio_agent")
         from ..shared.models import RiskLevel
 
         # Load asset universe from configuration
@@ -651,15 +651,14 @@ class PortfolioAgent(BaseAgent):
             triggers = []
 
             # Get current market data for trigger evaluation
-            market_context = await safe_coral_invoke(
-                self.coral_client,
-                "data_agent",
-                "get_market_context",
-                {},
-                "get_market_context"
-            )
-
-            market_data = market_context.get("market_data", {}) if market_context else {}
+            try:
+                from .data_agent import DataAgent
+                data_agent = DataAgent()
+                market_context = await data_agent.get_market_context()
+                market_data = market_context.get("market_data", {}) if market_context else {}
+            except Exception as e:
+                logger.warning(f"Failed to get market context: {e}")
+                market_data = {}
 
             # 1. Allocation Drift Trigger
             allocation_trigger = await self._evaluate_allocation_drift(

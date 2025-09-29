@@ -184,3 +184,7 @@ tests/
 
 database/
 .database/
+
+# Logs
+logs_store/
+*.log

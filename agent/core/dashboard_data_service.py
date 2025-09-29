@@ -172,7 +172,7 @@ class DashboardDataService:
                 # Save 2Y Treasury
                 if treasury_data.get("2y_yield") is not None:
                     treasury_2y = {
-                        "symbol": "2Y_TREASURY",
+                        "symbol": "2Y_TREAS",
                         "name": "2-Year Treasury Yield",
                         "asset_type": "YIELD",
                         "price": float(treasury_data.get("2y_yield", 0)),
@@ -186,7 +186,7 @@ class DashboardDataService:
                 # Save 10Y Treasury with spread context
                 if treasury_data.get("10y_yield") is not None:
                     treasury_10y = {
-                        "symbol": "10Y_TREASURY",
+                        "symbol": "10Y_TREAS",
                         "name": "10-Year Treasury Yield",
                         "asset_type": "YIELD",
                         "price": float(treasury_data.get("10y_yield", 0)),
@@ -243,13 +243,13 @@ class DashboardDataService:
                         "market_regime": record.get("context_data", {}).get("market_regime", "unknown"),
                         "timestamp": record.get("data_timestamp")
                     }
-                elif record.get("symbol") in ["2Y_TREASURY", "10Y_TREASURY"]:
+                elif record.get("symbol") in ["2Y_TREAS", "10Y_TREAS"]:
                     if "treasury" not in market_context:
                         market_context["treasury"] = {}
 
-                    if record.get("symbol") == "2Y_TREASURY":
+                    if record.get("symbol") == "2Y_TREAS":
                         market_context["treasury"]["2y_yield"] = record.get("price", 0)
-                    elif record.get("symbol") == "10Y_TREASURY":
+                    elif record.get("symbol") == "10Y_TREAS":
                         market_context["treasury"]["10y_yield"] = record.get("price", 0)
                         market_context["treasury"]["2s_10s_spread"] = record.get("context_data", {}).get("2s_10s_spread", 0)
 
@@ -279,26 +279,36 @@ class DashboardDataService:
             if not macro_data_list:
                 return True
 
+            # Import config to get FRED codes
+            from ..shared.config import config
+
             success_count = 0
             for macro_data in macro_data_list:
+                # Get the FRED code for this indicator
+                indicator_code = config.data_agent.MACRO_INDICATORS.get(macro_data.indicator, macro_data.indicator)
+
                 data = {
+                    "indicator_code": indicator_code,
                     "indicator_name": macro_data.indicator,
                     "value": float(macro_data.value) if macro_data.value else 0.0,
-                    "date": macro_data.date.date() if macro_data.date else datetime.now().date(),
+                    "date": macro_data.date.date().isoformat() if macro_data.date else datetime.now().date().isoformat(),
+                    "frequency": macro_data.frequency if hasattr(macro_data, 'frequency') else "unknown",
                     "source": "FRED",
                     "metadata": {
-                        "frequency": macro_data.frequency if hasattr(macro_data, 'frequency') else "unknown"
+                        "frequency": macro_data.frequency if hasattr(macro_data, 'frequency') else "unknown",
+                        "raw_indicator": macro_data.indicator
                     },
                     "created_at": datetime.now().isoformat()
                 }
 
                 response = supabase.table("dashboard_macro_data").upsert(
                     data,
-                    on_conflict="indicator_name,date"
+                    on_conflict="indicator_code,date"
                 ).execute()
 
                 if response.data:
                     success_count += 1
+                    logger.debug(f"Saved macro data for {macro_data.indicator} ({indicator_code})")
 
             logger.info(f"Successfully saved {success_count}/{len(macro_data_list)} macro data records")
             return success_count > 0

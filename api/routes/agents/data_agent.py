@@ -9,17 +9,13 @@ from datetime import datetime
 import logging
 
 from agent.core.data_agent import DataAgent
-from agent.coral.client import CoralClient
 from .shared import get_user_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Data Agent"], prefix="/data")
 
-# Initialize agent with Coral v01 integration
+# Initialize agent
 data_agent = DataAgent()
-
-# Initialize Coral client for agent-to-agent communication
-coral_client = CoralClient(agent_id="data_agent_api")
 
 
 @router.get("/health")

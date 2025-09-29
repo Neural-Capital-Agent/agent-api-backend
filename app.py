@@ -18,16 +18,15 @@ import os
 
 from api.api import api_router
 # from api.middleware.rate_limiting import RateLimitMiddleware, LLMUsageMiddleware  # Commented out to fix 429 errors
+from api.middleware.logging_middleware import LoggingMiddleware
 from core.config import settings
+from core.logging_config import setup_logging, get_logger, log_error, get_log_files_info
 
 # Scheduler removed per user request
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Setup comprehensive logging
+setup_logging()
+logger = get_logger(__name__)
 
 # Create FastAPI app with enhanced configuration
 app = FastAPI(
@@ -83,6 +82,20 @@ app = FastAPI(
 @app.exception_handler(StarletteHTTPException)
 async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
     """Custom HTTP exception handler with enhanced error information."""
+    # Log the HTTP exception
+    log_error(
+        logger=logger,
+        error=exc,
+        context={
+            "status_code": exc.status_code,
+            "path": str(request.url.path),
+            "method": request.method,
+            "user_id": getattr(request.state, 'user_id', 'anonymous'),
+            "request_id": getattr(request.state, 'request_id', 'unknown'),
+            "event_type": "http_exception"
+        }
+    )
+
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -91,7 +104,8 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
                 "message": exc.detail,
                 "timestamp": datetime.now().isoformat(),
                 "path": str(request.url.path),
-                "method": request.method
+                "method": request.method,
+                "request_id": getattr(request.state, 'request_id', 'unknown')
             }
         }
     )
@@ -100,6 +114,20 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Custom validation error handler."""
+    # Log the validation error
+    log_error(
+        logger=logger,
+        error=exc,
+        context={
+            "validation_errors": exc.errors(),
+            "path": str(request.url.path),
+            "method": request.method,
+            "user_id": getattr(request.state, 'user_id', 'anonymous'),
+            "request_id": getattr(request.state, 'request_id', 'unknown'),
+            "event_type": "validation_error"
+        }
+    )
+
     return JSONResponse(
         status_code=422,
         content={
@@ -109,7 +137,39 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 "details": exc.errors(),
                 "timestamp": datetime.now().isoformat(),
                 "path": str(request.url.path),
-                "method": request.method
+                "method": request.method,
+                "request_id": getattr(request.state, 'request_id', 'unknown')
+            }
+        }
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """General exception handler for unhandled errors."""
+    # Log the general exception
+    log_error(
+        logger=logger,
+        error=exc,
+        context={
+            "path": str(request.url.path),
+            "method": request.method,
+            "user_id": getattr(request.state, 'user_id', 'anonymous'),
+            "request_id": getattr(request.state, 'request_id', 'unknown'),
+            "event_type": "unhandled_exception"
+        }
+    )
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "code": 500,
+                "message": "Internal server error",
+                "timestamp": datetime.now().isoformat(),
+                "path": str(request.url.path),
+                "method": request.method,
+                "request_id": getattr(request.state, 'request_id', 'unknown')
             }
         }
     )
@@ -122,6 +182,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 #     llm_endpoints=["/api/v1/llm/", "/api/v1/agents/", "/api/v1/chat/"],
 #     default_user_tier="basic"
 # )
+
+# Set up logging middleware
+app.add_middleware(LoggingMiddleware)
 
 # Set up CORS
 app.add_middleware(
@@ -157,36 +220,6 @@ async def startup():
         # Dashboard scheduler removed - data updates via manual refresh only
         logger.info("[NOTE] Dashboard data updates via manual refresh button")
 
-        # Start Coral Protocol Server in background
-        try:
-            from agent.coral.server import coral_server
-            import asyncio
-
-            logger.info("[CORAL] Starting Coral Protocol Server...")
-
-            # Start the coral server in the background
-            asyncio.create_task(coral_server.start_server())
-
-            # Give the server more time to start and verify it's ready
-            await asyncio.sleep(3)
-            
-            # Test if server is responding
-            import httpx
-            coral_url = os.getenv('CORAL_SERVER_URL', 'http://localhost:5555')
-            try:
-                async with httpx.AsyncClient() as client:
-                    health_response = await client.get(f"{coral_url}/health", timeout=5.0)
-                    if health_response.status_code == 200:
-                        logger.info(f"[OK] Coral Protocol Server started on {coral_url}")
-                    else:
-                        logger.warning(f"[WARNING] Coral Server health check failed: {health_response.status_code}")
-            except Exception as health_error:
-                logger.warning(f"[WARNING] Coral Server health check failed: {health_error}")
-                logger.info("[NOTE] Continuing without Coral Protocol Server health verification")
-
-        except Exception as coral_server_error:
-            logger.error(f"[WARNING] Coral Protocol Server startup failed: {coral_server_error}")
-            logger.info("[NOTE] Continuing without Coral Protocol Server")
 
         # Initialize CrewAI
         try:
@@ -198,43 +231,19 @@ async def startup():
             logger.error(f"[WARNING] CrewAI initialization failed: {crew_error}")
             logger.info("[NOTE] Individual agents will still function normally")
 
-        # Initialize Coral Protocol integration
-        try:
-            from agent.coral.registry import coral_registry
-            logger.info("[CORAL] Initializing Coral Protocol integration...")
-
-            # Give Coral Server more time to be ready
-            await asyncio.sleep(3)
-
-            # Register agents with Coral Server for Studio visibility
-            registration_results = await coral_registry.register_all_agents()
-            successful_registrations = sum(1 for success in registration_results.values() if success)
-            total_agents = len(registration_results)
-
-            if successful_registrations == total_agents:
-                logger.info(f"[OK] All {total_agents} agents registered with Coral Server")
-            elif successful_registrations > 0:
-                logger.warning(f"[WARNING] Partial success: {successful_registrations}/{total_agents} agents registered with Coral Server")
-            else:
-                logger.error(f"[ERROR] Failed to register any agents with Coral Server")
-
-            logger.info(f"[TARGET] Coral Studio endpoints available at /api/v1/coral/")
-            logger.info(f"[CORAL] Coral Server URL: {coral_registry.coral_server_url}")
-
-        except Exception as coral_error:
-            logger.error(f"[WARNING] Coral Protocol initialization failed: {coral_error}")
-            logger.info("[NOTE] Agents will still function normally without Coral Studio integration")
 
         # Log startup completion
         logger.info("[STARTING] Neural Capital Financial Agents API started successfully")
-        api_base = os.getenv('CORAL_API_BASE_URL', 'http://localhost:8000')
-        coral_url = os.getenv('CORAL_SERVER_URL', 'http://localhost:5555')
+        api_base = os.getenv('API_BASE_URL', 'http://localhost:8000')
         logger.info(f"[DATA] API Documentation: {api_base}/docs")
         logger.info(f"[DOCS] ReDoc: {api_base}/redoc")
-        logger.info(f"[CORAL] Coral Protocol Server: {coral_url}/health")
 
     except Exception as e:
-        logger.error(f"[ERROR] Startup failed: {e}")
+        log_error(
+            logger=logger,
+            error=e,
+            context={"event_type": "startup_failure"}
+        )
         raise
 
 
@@ -244,13 +253,6 @@ async def shutdown():
     try:
         logger.info("[RELOAD] Shutting down Neural Capital API...")
 
-        # Close Coral Protocol connections
-        try:
-            from agent.coral.registry import coral_registry
-            await coral_registry.close()
-            logger.info("[OK] Coral Protocol connections closed")
-        except Exception as coral_error:
-            logger.warning(f"[WARNING] Coral shutdown warning: {coral_error}")
 
         # Close any open connections
         from agent.clients.mistral_client import mistral_client
@@ -258,7 +260,11 @@ async def shutdown():
 
         logger.info("[OK] Shutdown completed successfully")
     except Exception as e:
-        logger.error(f"[ERROR] Shutdown error: {e}")
+        log_error(
+            logger=logger,
+            error=e,
+            context={"event_type": "shutdown_failure"}
+        )
 
 
 @app.get("/")
@@ -294,23 +300,15 @@ async def read_root():
             "workflows": f"{settings.API_V1_STR}/crew/workflows",
             "health": f"{settings.API_V1_STR}/crew/health"
         },
-        "coral_protocol": {
-            "status": f"{settings.API_V1_STR}/coral/status",
-            "register": f"{settings.API_V1_STR}/coral/register",
-            "studio_config": f"{settings.API_V1_STR}/coral/studio-config",
-            "capabilities": f"{settings.API_V1_STR}/coral/capabilities"
-        },
         "features": [
             "Real-time market data",
             "AI-powered portfolio optimization",
             "Natural language goal parsing",
             "Financial decision explanations",
             "CrewAI orchestrated workflows",
-            "Coral Protocol integration",
             "Multi-agent collaboration",
             "Comprehensive rate limiting",
-            "LLM-powered insights",
-            "Studio-ready agent visibility"
+            "LLM-powered insights"
         ]
     }
 
@@ -382,20 +380,6 @@ async def system_health():
                 "error": str(e)
             }
 
-        # Check Coral Protocol registry
-        try:
-            from agent.coral.registry import coral_registry
-            coral_status = await coral_registry.get_agent_registry_status()
-            health_status["components"]["coral_registry"] = {
-                "status": "healthy" if coral_status.get("registry_status") != "critical" else "degraded",
-                "total_agents": coral_status.get("summary", {}).get("total_agents", 0),
-                "healthy_agents": coral_status.get("summary", {}).get("healthy_agents", 0)
-            }
-        except Exception as e:
-            health_status["components"]["coral_registry"] = {
-                "status": "unhealthy",
-                "error": str(e)
-            }
 
         # Determine overall health
         unhealthy_components = [
@@ -410,7 +394,11 @@ async def system_health():
         return health_status
 
     except Exception as e:
-        logger.error(f"System health check failed: {e}")
+        log_error(
+            logger=logger,
+            error=e,
+            context={"event_type": "health_check_failure"}
+        )
         return {
             "system": "unhealthy",
             "error": str(e),
@@ -500,12 +488,6 @@ async def api_info():
                 "orchestrated": True,
                 "ai_powered": True
             },
-            "coral_protocol": {
-                "studio_integration": True,
-                "agent_visibility": True,
-                "network_discovery": True,
-                "capabilities_export": True
-            },
             "rate_limiting": {
                 "tiers": ["basic", "premium", "enterprise"],
                 "time_windows": ["daily", "hourly", "minute"],
@@ -518,11 +500,40 @@ async def api_info():
             "data_sources": 3,
             "llm_operations": 5,
             "crewai_workflows": 3,
-            "coral_endpoints": 8,
-            "integration_protocols": 2
+            "integration_protocols": 1
         },
         "timestamp": datetime.now().isoformat()
     }
+
+
+@app.get("/logs/status")
+async def get_logs_status():
+    """Get current logging status and file information."""
+    try:
+        log_info = get_log_files_info()
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "log_files": log_info,
+            "configuration": {
+                "log_directory": "logs_store/",
+                "date_format": "YYYY-MM-DD",
+                "retention_days": 30,
+                "rotation_size_mb": 10,
+                "backup_count": 5
+            }
+        }
+    except Exception as e:
+        log_error(
+            logger=logger,
+            error=e,
+            context={"event_type": "logs_status_failure"}
+        )
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 if __name__ == "__main__":
     import uvicorn

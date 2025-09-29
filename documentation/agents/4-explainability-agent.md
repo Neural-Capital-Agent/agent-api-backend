@@ -1,5 +1,10 @@
 # Explainability Agent Documentation
 
+## Data Storage - Supabase Tables
+
+The Explainability Agent stores its data in the following Supabase table:
+- **`explainability_analysis`** - Main table storing comprehensive explanation analyses, theoretical frameworks, risk assessments, and metadata
+
 ## Overview
 
 The **Explainability Agent** is responsible for **financial jargon translation and decision rationale generation**. It takes complex financial decisions and technical language from other agents and explains them in plain English, providing context, risk assessments, and historical perspectives to make AI-driven financial advice transparent and accessible to everyday users.

@@ -164,45 +164,6 @@ class ExplanationResponse:
     confidence_score: float
     verification_hash: Optional[str] = None
 
-# Coral Protocol Models
-@dataclass
-class CoralMessage:
-    agent_id: str
-    target_agent: str
-    method: str
-    parameters: Dict[str, Any]
-    timestamp: datetime
-    message_id: str = None
-
-    def __post_init__(self):
-        if self.message_id is None:
-            self.message_id = str(uuid.uuid4())
-
-@dataclass
-class CoralResponse:
-    message_id: str
-    agent_id: str
-    response_data: Any
-    success: bool
-    error_message: Optional[str] = None
-    timestamp: datetime = None
-
-    def __post_init__(self):
-        if self.timestamp is None:
-            self.timestamp = datetime.now()
-
-@dataclass
-class AgentRegistration:
-    agent_id: str
-    agent_type: str
-    capabilities: List[str]
-    endpoint: str
-    status: str = "active"
-    registered_at: datetime = None
-
-    def __post_init__(self):
-        if self.registered_at is None:
-            self.registered_at = datetime.now()
 
 # Agent-specific configuration models
 @dataclass
